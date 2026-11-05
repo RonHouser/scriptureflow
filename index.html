@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -7,25 +6,16 @@
     <meta name="theme-color" content="#0a0e1a" />
     <title>Scripture Flow | KJV Typing Meditation</title>
     <meta name="description" content="Type verses from the King James Bible. Let the Word guide your fingers." />
-    <!-- PWA Manifest -->
-    <link rel="manifest" href='data:application/manifest+json,{
-      "name": "Scripture Flow",
-      "short_name": "KJV Flow",
-      "start_url": ".",
-      "display": "standalone",
-      "background_color": "#0a0e1a",
-      "theme_color": "#0a0e1a",
-      "icons": [{
-        "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%2B%3C/text%3E%3C/svg%3E",
-        "sizes": "any",
-        "type": "image/svg+xml"
-      }]
-    }' />
+    <!-- Favicon (the old inline data: manifest was not installable by browsers, so it was removed) -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%9D%3C/text%3E%3C/svg%3E" />
     <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://rsms.me/inter/inter.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet" />
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tone@14.8.39/build/Tone.min.js"></script>
+    <!-- TIP: replace "latest" with a specific version number so a future Lucide release can't silently break the icons -->
+    <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/tone@14.8.39/build/Tone.min.js"></script>
     <style>
         :root {
             --bg-start: #0a0e1a;
@@ -44,6 +34,7 @@
             --bubble-green: #10b981;
             --bubble-yellow: #facc15;
             --bubble-border: rgba(255, 255, 255, 0.2);
+            --text-secondary: #cbd5e1; /* was referenced by the About modal but never defined */
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; overflow: hidden; }
@@ -61,9 +52,11 @@
             pointer-events: none;
             animation: float 20s infinite ease-in-out;
         }
-        .orb:nth-child(1) { width: 400px; height: 400px; top: 10%; left: 10%; animation-delay: 0s; }
-        .orb:nth-child(2) { width: 600px; height: 600px; top: 60%; right: 15%; animation-delay: 7s; }
-        .orb:nth-child(3) { width: 300px; height: 300px; bottom: 20%; left: 50%; animation-delay: 14s; }
+        /* nth-of-type (not nth-child): the <canvas> is body's first child, so nth-child(1) never matched
+           and the third orb rendered at 0x0 */
+        .orb:nth-of-type(1) { width: 400px; height: 400px; top: 10%; left: 10%; animation-delay: 0s; }
+        .orb:nth-of-type(2) { width: 600px; height: 600px; top: 60%; right: 15%; animation-delay: 7s; }
+        .orb:nth-of-type(3) { width: 300px; height: 300px; bottom: 20%; left: 50%; animation-delay: 14s; }
         @keyframes float {
             0%, 100% { transform: translateY(0) scale(1); }
             50% { transform: translateY(-60px) scale(1.1); }
@@ -144,6 +137,7 @@
             box-shadow: 0 12px 28px rgba(96, 165, 250, 0.5);
         }
         .tooltip {
+            display: block;
             position: absolute;
             top: 100%;
             left: 50%;
@@ -160,14 +154,17 @@
             margin-top: 1rem;
             z-index: 1001;
         }
-        .mode-btn:hover .tooltip {
+        .mode-btn:hover .tooltip,
+        .mode-btn:focus-visible .tooltip {
             opacity: 1;
         }
-        .tooltip h3 {
+        .tooltip strong {
+            display: block;
             font-size: 1rem;
             margin-bottom: 0.5rem;
         }
-        .tooltip p {
+        .tooltip small {
+            display: block;
             font-size: 0.8rem;
             color: var(--text-muted);
         }
@@ -193,16 +190,12 @@
             margin: 1.5rem auto 0;
         }
         #mario-iframe {
-            position: relative;
-            left: 0;
-            width: 85%;
-            height: 85%;
+            display: block;
+            width: 100%;
+            height: 100%;
             border-radius: 1rem;
             border: 5px solid var(--glass-border);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-        @media (max-width: 40px) {
-            #mario-ui { padding: 0.5rem; }
         }
         #verse {
             font-family: 'Cormorant Garamond', Georgia, serif;
@@ -246,25 +239,6 @@
             left: -9999px;
             opacity: 0;
             pointer-events: none;
-        }
-        #progress-link, #menu-link {
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 1.2rem;
-            padding: 0.75rem 1.6rem;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
-            margin-top: 1rem;
-            display: inline-block;
-        }
-        #progress-link:hover, #menu-link:hover {
-            background: var(--accent-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(96, 165, 250, 0.4);
         }
         #volume-control {
             position: fixed;
@@ -406,16 +380,12 @@
             pointer-events: auto;
         }
         .memory-bubble:hover .delete-btn,
-        .stat:hover .delete-btn {
+        .memory-bubble .delete-btn:focus-visible {
             opacity: 0.3;
         }
-        .memory-bubble .delete-btn:hover,
-        .stat .delete-btn:hover {
+        .memory-bubble .delete-btn:hover {
             opacity: 0.8;
             color: red;
-        }
-        .stat:hover .delete-btn {
-            opacity: 1;
         }
         #detail-view {
             display: none;
@@ -476,7 +446,7 @@
             background: rgba(255,255,255,0.25);
             transform: translateY(-2px);
         }
-        .books-grid, .chapters-grid, .verses-grid {
+        .books-grid, .chapters-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
             gap: 0.8rem;
@@ -597,7 +567,7 @@
             opacity: 1;
             z-index: 1;
         }
-        .verse-btn:hover i {
+        .verse-btn:hover svg {
             filter: drop-shadow(0 0 8px var(--accent-hover));
         }
         .modal-actions {
@@ -658,53 +628,20 @@
             .modal-actions { flex-direction: column; align-items: center; }
             .modal-actions button { width: 100%; max-width: 200px; }
             #stats, #memory-content { grid-template-columns: repeat(1, 1fr); gap: 1rem; }
-            .books-grid, .chapters-grid, .verses-grid { grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 0.6rem; }
+            .books-grid, .chapters-grid { grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 0.6rem; }
             .book-bubble, .chapter-bubble, .verse-bubble { font-size: 0.52rem; }
             .chapter-text { font-size: 1.1rem; }
             .mode-buttons { flex-direction: column; }
             #bottom-controls { flex-direction: column; gap: 0.5rem; }
         }
-        #progress-modal .card, #memory-modal .card, #ref-selector-modal .card, #about-modal .card {
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            max-height: 90vh;
-        }
-        .books-grid,
-        .chapters-grid,
-        .verses-grid {
-            overflow: visible !important;
+        .books-grid, .chapters-grid {
             padding: 0.8rem 1.5rem;
             gap: 1rem;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
         }
-        .book-bubble,
-        .chapter-bubble,
-        .verse-bubble {
-            position: relative;
-            z-index: 1;
-        }
-        .book-bubble:hover,
-        .chapter-bubble:hover,
-        .verse-bubble:hover {
-            transform: scale(1.12);
-            box-shadow: 0 0 20px rgba(96,165,250,0.6);
-            z-index: 20;
-        }
+        .book-bubble:hover, .chapter-bubble:hover { z-index: 20; }
         @media (max-width: 640px) {
-            .books-grid,
-            .chapters-grid,
-            .verses-grid {
-                grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
-                gap: 0.7rem;
-                padding: 0.6rem 0.4rem;
-            }
-            .book-bubble:hover,
-            .chapter-bubble:hover,
-            .verse-bubble:hover {
-                transform: scale(1.08);
-            }
+            .books-grid, .chapters-grid { gap: 0.7rem; padding: 0.6rem 0.4rem; }
+            .book-bubble:hover, .chapter-bubble:hover { transform: scale(1.08); }
         }
         #particles {
             position: fixed;
@@ -770,29 +707,38 @@
         .phrase-span.correct {
             color: var(--text);
         }
-        #profile-control {
-            position: fixed;
-            bottom: 1.8rem;
-            left: 2.8rem;
-            display: flex;
-            align-items: center;
-            gap: 0.7rem;
+        /* Shared "glass pill" style for the floating controls (was copy-pasted 5x, plus JS hover handlers) */
+        .glass-pill {
             background: var(--glass);
             border: 1px solid var(--glass-border);
             border-radius: 1.5rem;
             padding: 0.6rem 1rem;
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
+            font: inherit;
             font-size: 0.85rem;
             color: var(--text);
             opacity: 0.5;
             transition: opacity 0.3s, box-shadow 0.3s;
             cursor: pointer;
         }
-        #profile-control:hover {
+        .glass-pill:hover, .glass-pill:focus-visible {
             opacity: 1;
             box-shadow: 0 0 10px #60a5fa;
+        }
+        #profile-control {
+            position: fixed;
+            bottom: 1.8rem;
+            left: 2.8rem;
+            z-index: 1000;
+        }
+        #about-control {
+            position: fixed;
+            top: 1.2rem;
+            right: 1.2rem;
+            z-index: 1001;
+            opacity: 0.7;
         }
         #bottom-controls {
             position: fixed;
@@ -803,56 +749,21 @@
             gap: 1rem;
             z-index: 1000;
         }
-        #progress-control {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 1.5rem;
-            padding: 0.6rem 1rem;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-            font-size: 0.85rem;
-            color: var(--text);
-            opacity: 0.5;
-            transition: opacity 0.3s, box-shadow 0.3s;
-            cursor: pointer;
+        .stat { font: inherit; color: inherit; width: 100%; }
+        #music-status { color: var(--incorrect); font-size: 0.75rem; }
+        #verse .retry-btn {
+            font: inherit; font-size: 1rem; margin-top: 1rem;
+            background: var(--accent); color: #fff; border: none;
+            border-radius: 1.2rem; padding: 0.6rem 1.4rem; cursor: pointer;
         }
-        #progress-control:hover {
-            opacity: 1;
-            box-shadow: 0 0 10px #60a5fa;
+        button:focus-visible, .book-bubble:focus-visible, .chapter-bubble:focus-visible,
+        .memory-bubble:focus-visible, .stat:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
         }
-        #menu-control {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 1.5rem;
-            padding: 0.6rem 1rem;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-            font-size: 0.85rem;
-            color: var(--text);
-            opacity: 0.5;
-            transition: opacity 0.3s, box-shadow 0.3s;
-            cursor: pointer;
-        }
-        #menu-control:hover {
-            opacity: 1;
-            box-shadow: 0 0 10px #60a5fa;
-        }
-        #mario-control {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 1.5rem;
-            padding: 0.6rem 1rem;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-            font-size: 0.85rem;
-            color: var(--text);
-            opacity: 0.5;
-            transition: opacity 0.3s, box-shadow 0.3s;
-            cursor: pointer;
-        }
-        #mario-control:hover {
-            opacity: 1;
-            box-shadow: 0 0 10px #60a5fa;
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+            #particles { display: none; }
         }
         #profile-list {
             position: fixed;
@@ -1013,20 +924,15 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(96, 165, 250, 0.4);
         }
-        .mode-btn i {
+        /* Lucide replaces <i data-lucide> with <svg>, so these must target svg (the old "i" selectors never matched) */
+        .mode-btn svg {
             width: 32px;
             height: 32px;
-            stroke: currentColor;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            fill: none;
             transition: all 0.3s ease;
         }
-        .mode-btn:hover i {
-            stroke: var(--accent-hover);
+        .mode-btn:hover svg {
             stroke-width: 2.5;
-            filter: drop-shadow(0 0 8px var(--accent-hover));
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));
         }
         #confirm-delete-memory {
             background: #ef4444;
@@ -1060,7 +966,7 @@
             align-items: center;
             gap: 0.5rem;
         }
-        #about-content i {
+        #about-content svg {
             width: 24px;
             height: 24px;
             stroke: var(--accent);
@@ -1100,165 +1006,160 @@
             <h1>Scripture Flow</h1>
             <p>Type verses from the King James Bible. Let the Word guide your fingers.</p>
             <div class="mode-buttons">
-                <button id="random-btn" class="mode-btn">
+                <button id="random-btn" class="mode-btn" type="button" aria-label="Random mode">
                     <i data-lucide="shuffle"></i>
-                    <div class="tooltip"><h3>Random</h3><p>Let the verses flow randomly</p></div>
+                    <span class="tooltip"><strong>Random</strong><small>Let the verses flow randomly</small></span>
                 </button>
-                <button id="memory-btn" class="mode-btn">
+                <button id="memory-btn" class="mode-btn" type="button" aria-label="Memory mode">
                     <i data-lucide="brain"></i>
-                    <div class="tooltip"><h3>Memory</h3><p>Memorize verses by fading words</p></div>
+                    <span class="tooltip"><strong>Memory</strong><small>Memorize verses by fading words</small></span>
                 </button>
-                <button id="choice-btn" class="mode-btn">
+                <button id="choice-btn" class="mode-btn" type="button" aria-label="Choice mode">
                     <i data-lucide="list"></i>
-                    <div class="tooltip"><h3>Choice</h3><p>Select specific verses or chapters</p></div>
+                    <span class="tooltip"><strong>Choice</strong><small>Select specific verses or chapters</small></span>
                 </button>
             </div>
         </div>
         <!-- Game UI -->
         <div id="game-ui" class="card">
-            <div id="verse" class="loading">Loading scripture and ambient flow…</div>
-            <input id="hidden-input" type="text" autocomplete="off" autocapitalize="off" />
+            <div id="verse" class="loading" aria-live="polite">Loading scripture and ambient flow…</div>
+            <input id="hidden-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type the verse" />
             <div id="ref"></div>
         </div>
         <!-- Mario Game UI -->
         <div id="mario-ui" class="card">
             <h2>Mario Teaches Typing</h2>
             <p style="color: #888; font-size: 0.85em; margin: 8px 0;">
-                Click in the window to engage • Press ESC to exit
+                Click in the window to play • Press Menu (below) to exit
             </p>
             <div class="iframe-container">
-                <iframe id="mario-iframe" src="https://www.retrogames.cz/js-dos-622start.php?id2=1254&language=EN" frameborder="0" allowfullscreen webkitallowfullscreen mozallowfullscreen tabindex="0"></iframe>
+                <iframe id="mario-iframe" title="Mario Teaches Typing" src="about:blank" data-src="https://www.retrogames.cz/js-dos-622start.php?id2=1254&language=EN" allowfullscreen></iframe>
             </div>
         </div>
     </div>
     <!-- Volume Control -->
     <div id="volume-control">
-        <span>Volume</span>
+        <label for="volume-slider">Volume</label>
         <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.15" />
         <span id="volume-value">15%</span>
+        <span id="music-status" role="status" hidden></span>
     </div>
     <!-- Bottom Controls -->
-    <div id="bottom-controls">
-        <div id="progress-control">
-            <span>Progress</span>
-        </div>
-        <div id="menu-control">
-            <span>Menu</span>
-        </div>
-        <div id="mario-control">
-            <span>Mario</span>
-        </div>
-    </div>
+    <nav id="bottom-controls" aria-label="Main controls">
+        <button type="button" id="progress-control" class="glass-pill">Progress</button>
+        <button type="button" id="menu-control" class="glass-pill">Menu</button>
+        <button type="button" id="mario-control" class="glass-pill">Mario</button>
+    </nav>
+    <button type="button" id="profile-control" class="glass-pill"><span id="profile-name"></span></button>
+    <button type="button" id="about-control" class="glass-pill">About</button>
     <!-- Audio Elements -->
-    <audio id="unlock-audio" preload="auto">
-        <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAA" type="audio/wav" />
-    </audio>
-    <audio id="ambient-audio" loop preload="auto" crossorigin="anonymous">
-        <source src="https://ice1.somafm.com/deepspaceone-128-mp3" type="audio/mpeg" />
-    </audio>
+    <!-- Ambient stream. The source is assigned in JS (see AMBIENT_STREAMS) so it can fail over between servers.
+         No crossorigin attribute: SomaFM doesn't guarantee CORS headers, and with crossorigin="anonymous"
+         the browser refuses to play the stream at all if they're missing. -->
+    <audio id="ambient-audio" preload="none"></audio>
     <!-- Progress Modal -->
-    <div id="progress-modal">
+    <div id="progress-modal" class="modal" role="dialog" aria-modal="true">
         <div class="card">
             <h2>Your Scripture Journey</h2>
             <div id="stats"></div>
             <div id="detail-view">
                 <div id="detail-title"></div>
                 <div id="detail-content"></div>
-                <button id="back-btn">Back</button>
+                <button type="button" id="back-btn">Back</button>
             </div>
             <div class="modal-actions">
-                <button id="close-modal">Close</button>
-                <button id="export-progress">Export</button>
-                <button id="clear-progress">Clear All</button>
+                <button type="button" id="close-modal">Close</button>
+                <button type="button" id="export-progress">Export</button>
+                <button type="button" id="clear-progress">Clear All</button>
             </div>
         </div>
     </div>
     <!-- Memory Modal -->
-    <div id="memory-modal">
+    <div id="memory-modal" class="modal" role="dialog" aria-modal="true">
         <div class="card">
             <h2>Memory Bank</h2>
             <div id="memory-content"></div>
             <div class="modal-actions">
-                <button id="add-memory">Add</button>
-                <button id="close-memory">Close</button>
+                <button type="button" id="add-memory">Add</button>
+                <button type="button" id="close-memory">Close</button>
             </div>
         </div>
     </div>
     <!-- Ref Selector Modal -->
-    <div id="ref-selector-modal">
+    <div id="ref-selector-modal" class="modal" role="dialog" aria-modal="true">
         <div class="card">
             <h2 id="selector-title">Select Verse</h2>
             <div id="selector-content"></div>
-            <button id="selector-back" style="display:none;">Back</button>
+            <button type="button" id="selector-back" style="display:none;">Back</button>
             <div class="modal-actions">
-                <button id="close-selector">Close</button>
+                <button type="button" id="close-selector">Close</button>
             </div>
         </div>
     </div>
     <!-- Confirm Clear Modal -->
-    <div id="confirm-clear-modal">
+    <div id="confirm-clear-modal" class="modal" role="dialog" aria-modal="true">
         <div class="card">
             <h3>Warning: Permanent Deletion</h3>
             <p>This will erase all saved progress data. This action cannot be undone.</p>
             <p>To confirm, type the phrase in the box below:</p>
             <div class="confirm-input-wrapper">
                 <div id="confirm-ghost"></div>
-                <input id="confirm-input" type="text" autocomplete="off" />
+                <input id="confirm-input" type="text" autocomplete="off" aria-label="Type: Yes, I am sure." />
             </div>
             <div class="modal-actions">
-                <button id="cancel-clear">Cancel</button>
-                <button id="confirm-clear" disabled>Clear</button>
+                <button type="button" id="cancel-clear">Cancel</button>
+                <button type="button" id="confirm-clear" disabled>Clear</button>
             </div>
         </div>
     </div>
     <!-- Confirm Delete Profile Modal -->
-    <div id="confirm-delete-modal">
+    <div id="confirm-delete-modal" class="modal" role="dialog" aria-modal="true">
         <div class="card">
             <h3>Warning: Delete Profile</h3>
             <p>This will erase the profile <span id="delete-profile-name"></span> and all its saved progress data. This action cannot be undone.</p>
             <p>To confirm, type the phrase in the box below:</p>
             <div class="confirm-input-wrapper">
                 <div id="delete-ghost"></div>
-                <input id="delete-input" type="text" autocomplete="off" />
+                <input id="delete-input" type="text" autocomplete="off" aria-label="Type: Yes, I am sure." />
             </div>
             <div class="modal-actions">
-                <button id="cancel-delete">Cancel</button>
-                <button id="confirm-delete" disabled>Delete</button>
+                <button type="button" id="cancel-delete">Cancel</button>
+                <button type="button" id="confirm-delete" disabled>Delete</button>
             </div>
         </div>
     </div>
     <!-- Confirm Delete Memory Item Modal -->
-    <div id="confirm-delete-memory-modal">
+    <div id="confirm-delete-memory-modal" class="modal" role="dialog" aria-modal="true">
         <div class="card">
             <h3>Warning: Remove from Memory Bank</h3>
             <p>This will remove <span id="delete-memory-name"></span> from your memory bank. This action cannot be undone.</p>
             <div class="modal-actions">
-                <button id="cancel-delete-memory">Cancel</button>
-                <button id="confirm-delete-memory">Remove</button>
+                <button type="button" id="cancel-delete-memory">Cancel</button>
+                <button type="button" id="confirm-delete-memory">Remove</button>
             </div>
         </div>
     </div>
     <!-- Create Profile Modal -->
-    <div id="create-profile-modal">
+    <div id="create-profile-modal" class="modal" role="dialog" aria-modal="true">
         <div class="card">
             <h3>Create Profile</h3>
             <p>Enter profile name:</p>
-            <input id="new-profile-input" type="text" autocomplete="off" />
+            <input id="new-profile-input" type="text" autocomplete="off" maxlength="30" aria-label="Profile name" />
             <div class="modal-actions">
-                <button id="cancel-create">Cancel</button>
-                <button id="confirm-create" disabled>Create</button>
+                <button type="button" id="cancel-create">Cancel</button>
+                <button type="button" id="confirm-create" disabled>Create</button>
             </div>
         </div>
     </div>
     <!-- Custom Alert Modal -->
-    <div id="custom-alert-modal">
+    <div id="custom-alert-modal" class="modal" role="dialog" aria-modal="true">
         <div class="card">
             <p id="custom-alert-message"></p>
-            <button id="custom-alert-ok">OK</button>
+            <button type="button" id="custom-alert-ok">OK</button>
         </div>
     </div>
 <!-- About Modal -->
-<div id="about-modal">
+<div id="about-modal" class="modal" role="dialog" aria-modal="true">
     <div class="card">
         <h2>About Scripture Flow</h2>
         
@@ -1268,9 +1169,10 @@
                     Welcome to Scripture Flow
                 </h3>
                 <p style="font-size: 1.1rem; color: var(--text-secondary);">
-                    Scripture Flow is a typing app focused on the King James Bible. Type verses to learn the Word, track progress, improve spelling, and build typing skills in a serene environment with ambient music.<br><br>
+                    Scripture Flow is a typing app focused on the King James Bible. Type verses to learn the Word, track progress, improve spelling, and build typing skills in a serene environment with ambient music.
+                </p>
     <p style="margin: 0; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.55; padding: 1rem; background: rgba(255, 255, 255, 0.07); border-radius: 8px;">
-        Scripture Flow does not store data. All data is cached locally on the device accessing the app. 
+        Scripture Flow does not store data on a server. All data is saved locally in this browser on this device. 
     </p>
 	    </section>
             <section style="margin-bottom: 4rem;">
@@ -1324,7 +1226,7 @@
                     </li>
                     <li style="display: flex; gap: 0.7rem;">
                         <span style="color: var(--accent); font-weight: 600; min-width: 160px;">Volume Control:</span>
-                        <span>Adjust ambient music volume.</span>
+                        <span>Adjust ambient music volume. Music: Deep Space One by SomaFM (listener-supported radio).</span>
                     </li>
                     <li style="display: flex; gap: 0.7rem;">
                         <span style="color: var(--accent); font-weight: 600; min-width: 160px;">Export/Clear:</span>
@@ -1349,203 +1251,273 @@
         </div>
 
         <div class="modal-actions">
-            <button id="close-about">Close</button>
+            <button type="button" id="close-about">Close</button>
         </div>
     </div>
 </div>
     <script>
-        let currentProfile = localStorage.getItem('scripture-flow-current-profile') || '';
-// ─────── COMPLETION SOUND  ───────
-let completionSynth = null;
-let completionReady = false;
+        'use strict';
+        (() => {
+            /* =====================================================================
+               CONSTANTS
+               ===================================================================== */
+            const $ = id => document.getElementById(id);
+            const API = 'https://bible-api.com/';
+            // SomaFM rotates its direct "iceN" servers. ice1 is no longer in their published playlist,
+            // which is why the music stopped. These come from https://somafm.com/deepspaceone.pls.
+            // If they ever change again, open that .pls file in a browser and copy the new URLs here.
+            const AMBIENT_STREAMS = [
+                'https://ice6.somafm.com/deepspaceone-128-mp3',
+                'https://ice2.somafm.com/deepspaceone-128-mp3',
+                'https://ice5.somafm.com/deepspaceone-128-mp3'
+            ];
+            const ADVANCE_DELAY = 1800;          // ms between a completed verse and the next one
+            const MAX_RANDOM_TRIES = 6;          // bible-api.com allows ~15 requests / 30 s per IP
+            const CONFIRM_PHRASE = 'Yes, I am sure.';
+            const CHAPTER_CACHE_KEY = 'scripture-flow-chapter-cache';
+            const VOLUME_KEY = 'scripture-flow-volume';
+            const PROFILES_KEY = 'scripture-flow-profiles';
+            const CURRENT_PROFILE_KEY = 'scripture-flow-current-profile';
 
-async function initCompletionSound() {
-  if (completionReady) return;
-  await Tone.start(); // unlocks audio context on first real user interaction
-  
-  completionSynth = new Tone.PolySynth(Tone.FMSynth, {
-    harmonicity: 3,
-    modulationIndex: 10,
-    oscillator: { type: "sine" },
-    envelope: { attack: 0.8, decay: 1, sustain: 0.6, release: 2 },
-    modulation: { type: "square" },
-    volume: -9
-  });
+            const bookVerseCounts = {
+                "Genesis":1533,"Exodus":1213,"Leviticus":859,"Numbers":1288,"Deuteronomy":959,"Joshua":658,"Judges":618,"Ruth":85,
+                "1 Samuel":810,"2 Samuel":695,"1 Kings":816,"2 Kings":719,"1 Chronicles":942,"2 Chronicles":822,"Ezra":280,
+                "Nehemiah":406,"Esther":167,"Job":1070,"Psalms":2461,"Proverbs":915,"Ecclesiastes":222,"Song of Solomon":117,
+                "Isaiah":1292,"Jeremiah":1364,"Lamentations":154,"Ezekiel":1273,"Daniel":357,"Hosea":197,"Joel":73,"Amos":146,
+                "Obadiah":21,"Jonah":48,"Micah":105,"Nahum":47,"Habakkuk":56,"Zephaniah":53,"Haggai":38,"Zechariah":211,"Malachi":55,
+                "Matthew":1071,"Mark":678,"Luke":1151,"John":879,"Acts":1007,"Romans":433,"1 Corinthians":437,"2 Corinthians":257,
+                "Galatians":149,"Ephesians":155,"Philippians":104,"Colossians":95,"1 Thessalonians":89,"2 Thessalonians":47,
+                "1 Timothy":113,"2 Timothy":83,"Titus":46,"Philemon":25,"Hebrews":303,"James":108,"1 Peter":105,"2 Peter":61,
+                "1 John":105,"2 John":13,"3 John":14,"Jude":25,"Revelation":404
+            };
+            const bookChapterCounts = {
+                "Genesis":50,"Exodus":40,"Leviticus":27,"Numbers":36,"Deuteronomy":34,"Joshua":24,"Judges":21,"Ruth":4,
+                "1 Samuel":31,"2 Samuel":24,"1 Kings":22,"2 Kings":25,"1 Chronicles":29,"2 Chronicles":36,"Ezra":10,
+                "Nehemiah":13,"Esther":10,"Job":42,"Psalms":150,"Proverbs":31,"Ecclesiastes":12,"Song of Solomon":8,
+                "Isaiah":66,"Jeremiah":52,"Lamentations":5,"Ezekiel":48,"Daniel":12,"Hosea":14,"Joel":3,"Amos":9,
+                "Obadiah":1,"Jonah":4,"Micah":7,"Nahum":3,"Habakkuk":3,"Zephaniah":3,"Haggai":2,"Zechariah":14,"Malachi":4,
+                "Matthew":28,"Mark":16,"Luke":24,"John":21,"Acts":28,"Romans":16,"1 Corinthians":16,"2 Corinthians":13,
+                "Galatians":6,"Ephesians":6,"Philippians":4,"Colossians":4,"1 Thessalonians":5,"2 Thessalonians":3,
+                "1 Timothy":6,"2 Timothy":4,"Titus":3,"Philemon":1,"Hebrews":13,"James":5,"1 Peter":5,"2 Peter":3,
+                "1 John":5,"2 John":1,"3 John":1,"Jude":1,"Revelation":22
+            };
+            const bookOrder = Object.keys(bookVerseCounts);
 
-  const reverb = new Tone.Reverb({ decay: 8, wet: 0.6 }).toDestination();
-  const delay  = new Tone.FeedbackDelay("8n", 0.4).toDestination();
-  const filter = new Tone.Filter(800, "lowpass").connect(reverb).connect(delay);
-  
-  completionSynth.connect(filter);
-  completionReady = true;
-}
+            /* =====================================================================
+               DOM REFERENCES
+               ===================================================================== */
+            const mainMenu = $('main-menu');
+            const gameUI = $('game-ui');
+            const marioUI = $('mario-ui');
+            const marioIframe = $('mario-iframe');
+            const verseEl = $('verse');
+            const inputEl = $('hidden-input');
+            const refEl = $('ref');
+            const ambient = $('ambient-audio');
+            const volumeSlider = $('volume-slider');
+            const volumeValue = $('volume-value');
+            const musicStatus = $('music-status');
+            const modal = $('progress-modal');
+            const statsEl = $('stats');
+            const detailView = $('detail-view');
+            const detailTitle = $('detail-title');
+            const detailContent = $('detail-content');
+            const confirmModal = $('confirm-clear-modal');
+            const deleteModal = $('confirm-delete-modal');
+            const memoryDeleteModal = $('confirm-delete-memory-modal');
+            const deleteMemoryName = $('delete-memory-name');
+            const createModal = $('create-profile-modal');
+            const newProfileInput = $('new-profile-input');
+            const confirmCreate = $('confirm-create');
+            const memoryModal = $('memory-modal');
+            const memoryContent = $('memory-content');
+            const refSelectorModal = $('ref-selector-modal');
+            const selectorTitle = $('selector-title');
+            const selectorContent = $('selector-content');
+            const selectorBack = $('selector-back');
+            const customAlertModal = $('custom-alert-modal');
+            const customAlertMessage = $('custom-alert-message');
+            const customAlertOk = $('custom-alert-ok');
+            const aboutModal = $('about-modal');
+            const allModals = document.querySelectorAll('.modal');
 
-function playCompletionSound() {
-  if (!completionReady) return;
-  completionSynth.triggerAttackRelease("C3", "8n");
-}
+            /* =====================================================================
+               STATE
+               ===================================================================== */
+            let currentProfile = '';
+            let STORAGE_KEY = 'kjv-typing-progress-v6';
+            let MEMORY_KEY = 'scripture-flow-memory-bank';
 
-// Auto-init on first click/tap anywhere (required by browsers)
-document.documentElement.addEventListener('click', initCompletionSound, { once: true });
-document.documentElement.addEventListener('touchstart', initCompletionSound, { once: true });
-// ─────────────────────────────────────────────────────────────
-        let STORAGE_KEY = currentProfile ? 'kjv-typing-progress-v6-' + currentProfile : 'kjv-typing-progress-v6';
-        let MEMORY_KEY = currentProfile ? 'scripture-flow-memory-bank-' + currentProfile : 'scripture-flow-memory-bank';
-        const $ = id => document.getElementById(id);
-        const mainMenu = $('main-menu');
-        const gameUI = $('game-ui');
-        const marioUI = $('mario-ui');
-        const marioIframe = $('mario-iframe');
-        const verseEl = $('verse');
-        const inputEl = $('hidden-input');
-        const refEl = $('ref');
-        const unlock = $('unlock-audio');
-        const ambient = $('ambient-audio');
-        const modal = $('progress-modal');
-        const statsEl = $('stats');
-        const detailView = $('detail-view');
-        const detailTitle = $('detail-title');
-        const detailContent = $('detail-content');
-        const backBtn = $('back-btn');
-        const mainCard = gameUI;
-        const confirmModal = $('confirm-clear-modal');
-        const confirmInput = $('confirm-input');
-        const confirmClear = $('confirm-clear');
-        const cancelClear = $('cancel-clear');
-        const confirmGhost = $('confirm-ghost');
-        const deleteModal = $('confirm-delete-modal');
-        const deleteInput = $('delete-input');
-        const deleteGhost = $('delete-ghost');
-        const deleteProfileName = $('delete-profile-name');
-        const confirmDelete = $('confirm-delete');
-        const cancelDelete = $('cancel-delete');
-        const memoryDeleteModal = $('confirm-delete-memory-modal');
-        const deleteMemoryName = $('delete-memory-name');
-        const confirmDeleteMemory = $('confirm-delete-memory');
-        const cancelDeleteMemory = $('cancel-delete-memory');
-        const createModal = $('create-profile-modal');
-        const newProfileInput = $('new-profile-input');
-        const confirmCreate = $('confirm-create');
-        const cancelCreate = $('cancel-create');
-        const memoryModal = $('memory-modal');
-        const memoryContent = $('memory-content');
-        const addMemory = $('add-memory');
-        const closeMemory = $('close-memory');
-        const refSelectorModal = $('ref-selector-modal');
-        const selectorTitle = $('selector-title');
-        const selectorContent = $('selector-content');
-        const selectorBack = $('selector-back');
-        const closeSelector = $('close-selector');
-        const customAlertModal = $('custom-alert-modal');
-        const customAlertMessage = $('custom-alert-message');
-        const customAlertOk = $('custom-alert-ok');
-        const aboutModal = $('about-modal');
-        const closeAbout = $('close-about');
-        let currentVerse = '';
-        let currentRef = '';
-        let typedSoFar = '';
-        let lastErrorIndex = -1;
-        let errorCount = 0;
-        let currentMode = '';
-        let currentMemoryItem = null;
-        let isChapterMode = false;
-        let currentBook = '';
-        let currentChapter = 0;
-        let currentVerseNum = 1;
-        let totalVerses = 0;
-        let audioUnlocked = false;
-        let currentSelectorCallback = null;
-        let currentIsChoice = false;
-        let selectorCurrentView = 'books';
-        let selectorCurrentBook = null;
-        let selectorCurrentChapter = null;
-        const API = 'https://bible-api.com/';
-        let chapterDataCache = JSON.parse(localStorage.getItem('scripture-flow-chapter-cache')) || {};
-        let lastBookViewHTML = '';
-        const bookVerseCounts = {
-            "Genesis":1533,"Exodus":1213,"Leviticus":859,"Numbers":1288,"Deuteronomy":959,"Joshua":658,"Judges":618,"Ruth":85,
-            "1 Samuel":810,"2 Samuel":695,"1 Kings":816,"2 Kings":719,"1 Chronicles":942,"2 Chronicles":822,"Ezra":280,
-            "Nehemiah":406,"Esther":167,"Job":1070,"Psalms":2461,"Proverbs":915,"Ecclesiastes":222,"Song of Solomon":117,
-            "Isaiah":1292,"Jeremiah":1364,"Lamentations":154,"Ezekiel":1273,"Daniel":357,"Hosea":197,"Joel":73,"Amos":146,
-            "Obadiah":21,"Jonah":48,"Micah":105,"Nahum":47,"Habakkuk":56,"Zephaniah":53,"Haggai":38,"Zechariah":211,"Malachi":55,
-            "Matthew":1071,"Mark":678,"Luke":1151,"John":879,"Acts":1007,"Romans":433,"1 Corinthians":437,"2 Corinthians":257,
-            "Galatians":149,"Ephesians":155,"Philippians":104,"Colossians":95,"1 Thessalonians":89,"2 Thessalonians":47,
-            "1 Timothy":113,"2 Timothy":83,"Titus":46,"Philemon":25,"Hebrews":303,"James":108,"1 Peter":105,"2 Peter":61,
-            "1 John":105,"2 John":13,"3 John":14,"Jude":25,"Revelation":404
-        };
-        const bookChapterCounts = {
-            "Genesis":50,"Exodus":40,"Leviticus":27,"Numbers":36,"Deuteronomy":34,"Joshua":24,"Judges":21,"Ruth":4,
-            "1 Samuel":31,"2 Samuel":24,"1 Kings":22,"2 Kings":25,"1 Chronicles":29,"2 Chronicles":36,"Ezra":10,
-            "Nehemiah":13,"Esther":10,"Job":42,"Psalms":150,"Proverbs":31,"Ecclesiastes":12,"Song of Solomon":8,
-            "Isaiah":66,"Jeremiah":52,"Lamentations":5,"Ezekiel":48,"Daniel":12,"Hosea":14,"Joel":3,"Amos":9,
-            "Obadiah":1,"Jonah":4,"Micah":7,"Nahum":3,"Habakkuk":3,"Zephaniah":3,"Haggai":2,"Zechariah":14,"Malachi":4,
-            "Matthew":28,"Mark":16,"Luke":24,"John":21,"Acts":28,"Romans":16,"1 Corinthians":16,"2 Corinthians":13,
-            "Galatians":6,"Ephesians":6,"Philippians":4,"Colossians":4,"1 Thessalonians":5,"2 Thessalonians":3,
-            "1 Timothy":6,"2 Timothy":4,"Titus":3,"Philemon":1,"Hebrews":13,"James":5,"1 Peter":5,"2 Peter":3,
-            "1 John":5,"2 John":1,"3 John":1,"Jude":1,"Revelation":22
-        };
-        const bookOrder = Object.keys(bookVerseCounts);
-        function getBookFromRef(ref) {
-            for (let book of bookOrder) {
-                if (ref.startsWith(book + ' ')) {
-                    return book;
+            let currentVerse = '';
+            let currentRef = '';
+            let typedSoFar = '';
+            let lastErrorIndex = -1;
+            let errorCount = 0;
+            let startTime = 0;                 // was an undeclared (implicit global) variable
+            let currentMode = '';              // 'flow' | 'memory' | 'choice'
+            let currentMemoryItem = null;
+            let isChapterMode = false;
+            let currentBook = '';
+            let currentChapter = 0;
+            let currentVerseNum = 1;
+            let totalVerses = 0;
+            let advanceTimer = null;           // pending "load next verse" timer (cancelled when leaving the game)
+            let loadToken = 0;                 // ignores stale fetches that finish after the user navigated away
+
+            let currentSelectorCallback = null;
+            let currentIsChoice = false;
+            let selectorCurrentView = 'books';
+            let selectorCurrentBook = null;
+
+            let currentView = 'overview';
+            let progressCurrentBook = null;
+            let pendingMemoryDelete = null;
+
+            let chapterDataCache = {};
+            try { chapterDataCache = JSON.parse(localStorage.getItem(CHAPTER_CACHE_KEY)) || {}; } catch { chapterDataCache = {}; }
+
+            /* =====================================================================
+               UTILITIES
+               ===================================================================== */
+            const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+            function escapeHTML(str) {
+                return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            }
+
+            // Normalise API text so every character is typeable on a normal keyboard.
+            function cleanText(text) {
+                return text.replace(/^\d+\s*/, '')
+                    .replace(/\s+/g, ' ')
+                    .replace(/[‘’]/g, "'")
+                    .replace(/[“”]/g, '"')
+                    .replace(/[—–]/g, '-')
+                    .trim();
+            }
+
+            // "1 Samuel 3:4" -> { book: "1 Samuel", chapter: 3, verse: 4 }
+            // (The old code used ref.split(' '), which broke every numbered book and "Song of Solomon".)
+            function parseRef(ref) {
+                const m = /^(.+?)\s+(\d+):(\d+)$/.exec(ref);
+                return m ? { book: m[1], chapter: +m[2], verse: +m[3] } : null;
+            }
+
+            function getBookFromRef(ref) {
+                return bookOrder.find(book => ref.startsWith(book + ' ')) || null;
+            }
+
+            // Dates are stored as LOCAL YYYY-MM-DD (the old code used UTC, so evening sessions in the
+            // Americas counted as "tomorrow" and could break streaks).
+            function localDateStr(d = new Date()) {
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+            function parseLocalDate(str) {
+                const [y, m, d] = str.split('-').map(Number);
+                return new Date(y, m - 1, d);
+            }
+            function daysBetween(a, b) {
+                return Math.round((parseLocalDate(b) - parseLocalDate(a)) / 86400000);
+            }
+
+            function safeSetItem(key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                    return true;
+                } catch (err) {
+                    // Storage full: the chapter cache is the only thing that can safely be thrown away.
+                    if (key !== CHAPTER_CACHE_KEY) {
+                        chapterDataCache = {};
+                        localStorage.removeItem(CHAPTER_CACHE_KEY);
+                        try { localStorage.setItem(key, value); return true; } catch { /* fall through */ }
+                    }
+                    console.warn('Could not save to localStorage:', key, err);
+                    return false;
                 }
             }
-            return null;
-        }
-        /* Storage Functions */
-        function getProgress() {
-            const data = localStorage.getItem(STORAGE_KEY);
-            const defaults = {
-                completed: [],
-                first: null,
-                streak: 0,
-                lastDate: null,
-                totalWPM: 0,
-                verseCount: 0,
-                maxWPM: 0,
-                fastestRef: null,
-                fastestText: null,
-                totalAccuracy: 0,
-                recentWPMs: [],
-                recentAccuracies: []
-            };
-            const p = data ? { ...defaults, ...JSON.parse(data) } : defaults;
-            if (typeof p.first === 'number') {
-                p.first = new Date(p.first).toISOString().split('T')[0];
-                saveProgress(p);
+
+            // Makes a non-button element clickable AND keyboard accessible.
+            function makeClickable(el, handler) {
+                el.tabIndex = 0;
+                el.setAttribute('role', 'button');
+                el.addEventListener('click', handler);
+                el.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(e); }
+                });
             }
-            return p;
-        }
-        function saveProgress(data) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        }
-        function isCompleted(ref) {
-            return getProgress().completed.includes(ref);
-        }
-        function markCompleted(ref, wpm = null, accuracy = null) {
-            const p = getProgress();
-            if (!p.completed.includes(ref)) {
-                p.completed.push(ref);
-                const today = new Date().toISOString().split('T')[0];
+
+            function refreshIcons() {
+                if (window.lucide) window.lucide.createIcons();
+            }
+
+            /* =====================================================================
+               VIEW / MODAL HELPERS
+               ===================================================================== */
+            function showView(name) {
+                mainMenu.style.display = name === 'menu' ? 'block' : 'none';
+                gameUI.style.display = name === 'game' ? 'block' : 'none';
+                marioUI.style.display = name === 'mario' ? 'block' : 'none';
+                if (name !== 'game') {
+                    clearTimeout(advanceTimer);
+                    inputEl.disabled = true;
+                }
+                if (name !== 'mario' && marioIframe.src !== 'about:blank') {
+                    marioIframe.src = 'about:blank';   // stops the emulator (and its sound)
+                }
+            }
+            const openModal = el => { el.style.display = 'flex'; };
+            const closeModal = el => { el.style.display = 'none'; };
+            const anyModalOpen = () => [...allModals].some(m => m.style.display === 'flex');
+
+            function startGame(mode) {
+                currentMode = mode;
+                clearTimeout(advanceTimer);
+                showView('game');
+                startMusic();
+            }
+
+            /* =====================================================================
+               STORAGE
+               ===================================================================== */
+            function getProgress() {
+                const defaults = {
+                    completed: [], first: null, streak: 0, lastDate: null,
+                    totalWPM: 0, verseCount: 0, maxWPM: 0, fastestRef: null, fastestText: null,
+                    totalAccuracy: 0, recentWPMs: [], recentAccuracies: []
+                };
+                let stored = null;
+                try { stored = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { stored = null; }
+                const p = { ...defaults, ...(stored || {}) };
+                if (typeof p.first === 'number') {            // legacy format migration
+                    p.first = localDateStr(new Date(p.first));
+                    saveProgress(p);
+                }
+                return p;
+            }
+            function saveProgress(data) {
+                safeSetItem(STORAGE_KEY, JSON.stringify(data));
+            }
+            function currentStreak(p) {
+                if (!p.lastDate) return 0;
+                // A streak only counts if you typed today or yesterday (it used to show a stale number forever).
+                return daysBetween(p.lastDate, localDateStr()) <= 1 ? p.streak : 0;
+            }
+
+            function markCompleted(ref, wpm = null, accuracy = null) {
+                const p = getProgress();
+                const today = localDateStr();
+                if (!p.completed.includes(ref)) p.completed.push(ref);
                 if (!p.first) p.first = today;
+                // Streak + typing stats now update for every completion (re-typing a verse is still practice).
                 if (p.lastDate !== today) {
-                    if (p.lastDate) {
-                        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-                        p.streak = (p.lastDate === yesterday) ? p.streak + 1 : 1;
-                    } else {
-                        p.streak = 1;
-                    }
+                    p.streak = (p.lastDate && daysBetween(p.lastDate, today) === 1) ? p.streak + 1 : 1;
                     p.lastDate = today;
                 }
                 if (wpm !== null && accuracy !== null) {
                     p.totalWPM += wpm;
                     p.verseCount += 1;
                     p.totalAccuracy += accuracy;
-                    p.recentWPMs.push(wpm);
-                    if (p.recentWPMs.length > 10) p.recentWPMs.shift();
-                    p.recentAccuracies.push(accuracy);
-                    if (p.recentAccuracies.length > 10) p.recentAccuracies.shift();
+                    p.recentWPMs = [...p.recentWPMs, wpm].slice(-10);
+                    p.recentAccuracies = [...p.recentAccuracies, accuracy].slice(-10);
                     if (wpm > p.maxWPM) {
                         p.maxWPM = wpm;
                         p.fastestRef = ref;
@@ -1554,243 +1526,312 @@ document.documentElement.addEventListener('touchstart', initCompletionSound, { o
                 }
                 saveProgress(p);
             }
-        }
-        function getMemoryBank() {
-            return JSON.parse(localStorage.getItem(MEMORY_KEY)) || [];
-        }
-        function saveMemoryBank(bank) {
-            localStorage.setItem(MEMORY_KEY, JSON.stringify(bank));
-        }
-        /* Mode Start Functions */
-        $('random-btn').onclick = () => {
-            currentMode = 'flow';
-            mainMenu.style.display = 'none';
-            gameUI.style.display = 'block';
-            marioUI.style.display = 'none';
-            unlockAudio();
-            loadVerse();
-        };
-        $('memory-btn').onclick = () => {
-            currentMode = 'memory';
-            showMemoryModal();
-        };
-        $('choice-btn').onclick = () => {
-            currentMode = 'choice';
-            showRefSelector(true, (book, ch, vs) => {
-                mainMenu.style.display = 'none';
-                gameUI.style.display = 'block';
-                marioUI.style.display = 'none';
-                unlockAudio();
-                if (vs === undefined) {
-                    isChapterMode = true;
-                    currentBook = book;
-                    currentChapter = ch;
-                    let fetchRef = book.replace(/\s/g, '') + (bookChapterCounts[book] === 1 ? '1:1-' + bookVerseCounts[book] : ch);
-                    apiFetch(fetchRef).then(data => {
-                        totalVerses = data.verses.length;
-                        loadVerse(`${book} ${ch}:1`);
+
+            function getMemoryBank() {
+                try { return JSON.parse(localStorage.getItem(MEMORY_KEY)) || []; } catch { return []; }
+            }
+            function saveMemoryBank(bank) {
+                safeSetItem(MEMORY_KEY, JSON.stringify(bank));
+            }
+
+            /* =====================================================================
+               BIBLE API
+               ===================================================================== */
+            async function apiFetch(ref) {
+                const res = await fetch(`${API}${encodeURIComponent(ref)}?translation=kjv`);
+                if (!res.ok) {
+                    const err = new Error(`Bible API error ${res.status}`);
+                    err.status = res.status;
+                    throw err;
+                }
+                return res.json();
+            }
+
+            // Single-chapter books (Jude, Obadiah...) are requested as a verse range, because the API
+            // interprets "Jude 1" as verse 1 rather than chapter 1.
+            function chapterFetchRef(book, chapter) {
+                return book.replace(/\s/g, '') + (bookChapterCounts[book] === 1 ? '1:1-' + bookVerseCounts[book] : chapter);
+            }
+
+            // One cached source of truth for chapter text. Random, Choice, Chapter and Progress views all use it,
+            // so typing a whole chapter is now 1 request instead of 1 per verse.
+            async function getChapter(book, chapter) {
+                const key = `${book} ${chapter}`;
+                if (chapterDataCache[key]) return chapterDataCache[key];
+                const data = await apiFetch(chapterFetchRef(book, chapter));
+                if (!data?.verses?.length) throw new Error('Empty chapter');
+                const entry = {
+                    total: data.verses.length,
+                    verses: data.verses.map(v => ({ verse: v.verse, text: v.text }))   // store only what we use
+                };
+                chapterDataCache[key] = entry;
+                safeSetItem(CHAPTER_CACHE_KEY, JSON.stringify(chapterDataCache));
+                return entry;
+            }
+
+            async function fetchVerse(ref) {
+                const parsed = parseRef(ref);
+                if (parsed && bookChapterCounts[parsed.book]) {
+                    const chapter = await getChapter(parsed.book, parsed.chapter);
+                    const v = chapter.verses.find(x => x.verse === parsed.verse);
+                    if (!v) throw new Error('Verse not found');
+                    return { verseText: cleanText(v.text), reference: `${parsed.book} ${parsed.chapter}:${parsed.verse}` };
+                }
+                const data = await apiFetch(ref.replace(/\s/g, ''));
+                return { verseText: cleanText(data.text), reference: data.reference };
+            }
+
+            async function fetchUnseenVerse() {
+                const completed = new Set(getProgress().completed);
+                for (let i = 0; i < MAX_RANDOM_TRIES; i++) {
+                    const book = bookOrder[Math.floor(Math.random() * bookOrder.length)];
+                    const chapterNum = randomInt(1, bookChapterCounts[book]);
+                    const chapter = await getChapter(book, chapterNum);
+                    const unseen = chapter.verses.filter(v => !completed.has(`${book} ${chapterNum}:${v.verse}`));
+                    if (!unseen.length) continue;
+                    const pick = unseen[randomInt(0, unseen.length - 1)];
+                    return { verseText: cleanText(pick.text), reference: `${book} ${chapterNum}:${pick.verse}` };
+                }
+                throw new Error('No unseen verse found');
+            }
+
+            /* =====================================================================
+               AMBIENT MUSIC
+               ===================================================================== */
+            let streamIndex = 0;
+            let musicStarted = false;
+            let musicFailed = false;
+            let fadeTimer = null;
+
+            const targetVolume = () => parseFloat(volumeSlider.value);
+
+            function setMusicStatus(text) {
+                musicStatus.textContent = text;
+                musicStatus.hidden = !text;
+            }
+
+            function fadeIn() {
+                clearInterval(fadeTimer);
+                const target = targetVolume();
+                fadeTimer = setInterval(() => {
+                    if (ambient.volume < target) {
+                        ambient.volume = Math.min(target, ambient.volume + 0.01);
+                    } else {
+                        clearInterval(fadeTimer);
+                    }
+                }, 40);
+            }
+
+            function playAmbient() {
+                ambient.volume = 0;
+                ambient.play()
+                    .then(() => { setMusicStatus(''); fadeIn(); })
+                    .catch(err => {
+                        // Autoplay blocked: allow the next user click to try again.
+                        // (Network/format errors are handled by the 'error' listener below.)
+                        if (err.name === 'NotAllowedError') musicStarted = false;
                     });
+            }
+
+            function startMusic() {
+                if (musicStarted || musicFailed) return;
+                musicStarted = true;
+                if (!ambient.getAttribute('src')) ambient.src = AMBIENT_STREAMS[streamIndex];
+                playAmbient();
+            }
+
+            function tryNextStream() {
+                streamIndex++;
+                if (streamIndex < AMBIENT_STREAMS.length) {
+                    ambient.src = AMBIENT_STREAMS[streamIndex];
+                    playAmbient();
                 } else {
-                    isChapterMode = false;
-                    loadVerse(`${book} ${ch}:${vs}`);
+                    musicFailed = true;
+                    musicStarted = false;
+                    setMusicStatus('Music unavailable');
+                    console.warn('All ambient streams failed. Check', AMBIENT_STREAMS);
                 }
+            }
+
+            ambient.addEventListener('error', tryNextStream);
+            // Live streams can drop; reconnect on the same server list.
+            ambient.addEventListener('ended', () => {
+                if (!musicStarted) return;
+                streamIndex = (streamIndex + 1) % AMBIENT_STREAMS.length;
+                ambient.src = AMBIENT_STREAMS[streamIndex];
+                playAmbient();
             });
-        };
-        $('mario-control').onclick = () => {
-            mainMenu.style.display = 'none';
-            gameUI.style.display = 'none';
-            marioUI.style.display = 'block';
-            ambient.volume = 0;
-            setTimeout(() => {
-                if (marioIframe) {
-                    marioIframe.focus();
-                }
-            }, 100);
-        };
-        let isMarioActive = false;
-        marioIframe.addEventListener('load', () => {
-            marioIframe.contentWindow.addEventListener('focus', () => {
-                if (marioUI.style.display === 'block') {
-                    ambient.volume = 0;
-                    isMarioActive = true;
-                }
+
+            function pauseMusic() {
+                clearInterval(fadeTimer);
+                ambient.pause();                       // pause (not volume 0) so the stream stops downloading
+            }
+            function resumeMusic() {
+                if (musicStarted && ambient.paused) playAmbient();
+            }
+
+            const savedVolume = parseFloat(localStorage.getItem(VOLUME_KEY));
+            if (!Number.isNaN(savedVolume)) volumeSlider.value = Math.min(1, Math.max(0, savedVolume));
+            volumeValue.textContent = `${Math.round(targetVolume() * 100)}%`;
+
+            volumeSlider.addEventListener('input', () => {
+                const vol = targetVolume();
+                clearInterval(fadeTimer);
+                ambient.volume = vol;
+                volumeValue.textContent = `${Math.round(vol * 100)}%`;
+                safeSetItem(VOLUME_KEY, String(vol));
             });
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && isMarioActive) {
-                e.preventDefault();
-                marioUI.style.display = 'none';
-                mainMenu.style.display = 'block';
-                const targetVol = parseFloat($('volume-slider').value);
-                ambient.volume = targetVol;
-                isMarioActive = false;
-                inputEl.focus();
-            }
-        });
-        marioIframe.addEventListener('blur', () => {
-            if (isMarioActive && marioUI.style.display === 'block') {
-            }
-        });
-        $('progress-control').onclick = () => {
-            currentView = 'overview';
-            showOverview();
-            modal.style.display = 'flex';
-            marioIframe.src = "https://www.retrogames.cz/js-dos-622start.php?id2=1254&language=EN";
-        };
-        $('menu-control').onclick = () => {
-            gameUI.style.display = 'none';
-            marioUI.style.display = 'none';
-            mainMenu.style.display = 'block';
-            inputEl.disabled = true;
-            currentMode = '';
-            isChapterMode = false;
-            currentMemoryItem = null;
-            const targetVol = parseFloat($('volume-slider').value);
-            ambient.volume = targetVol;
-            isMarioActive = false;
-            marioIframe.src = "https://www.retrogames.cz/js-dos-622start.php?id2=1254&language=EN";
-        };
-        function unlockAudio() {
-            if (audioUnlocked) return;
-            audioUnlocked = true;
-            ambient.volume = 0;
-            ambient.play().catch(() => {});
-            const fade = setInterval(() => {
-                if (ambient.volume < 0.15) {
-                    ambient.volume = Math.min(0.15, ambient.volume + 0.01);
-                } else {
-                    clearInterval(fade);
-                }
-            }, 40);
-        }
-        $('volume-slider').addEventListener('input', e => {
-            const vol = parseFloat(e.target.value);
-            ambient.volume = vol;
-            $('volume-value').textContent = `${Math.round(vol * 100)}%`;
-        });
-        /* Verse Fetching Functions */
-        async function loadVerse(ref = null, text = null) {
-            verseEl.className = 'loading';
-            verseEl.textContent = 'Fetching a new verse…';
-            refEl.textContent = '';
-            typedSoFar = '';
-            lastErrorIndex = -1;
-            errorCount = 0;
-            inputEl.value = '';
-            inputEl.disabled = true;
-            startTime = 0;
-            try {
-                let verseText, reference;
-                if (text) {
-                    verseText = text;
-                    reference = ref;
-                } else if (ref) {
-                    ({ verseText, reference } = await fetchVerse(ref));
-                } else {
-                    ({ verseText, reference } = await fetchUnseenVerse());
-                }
-                currentVerse = verseText;
-                currentRef = reference;
-                let hiddenWords = new Set();
-                if (currentMode === 'memory' && currentMemoryItem) {
-                    hiddenWords = new Set(currentMemoryItem.hidden);
-                }
-                renderVerse(verseText, hiddenWords);
-                refEl.textContent = reference;
-                inputEl.disabled = false;
-                inputEl.focus();
-            } catch {
-                fallbackVerse();
-            }
-        }
-        async function fetchUnseenVerse() {
-            const maxTries = 50;
-            const completed = getProgress().completed;
-            for (let i = 0; i < maxTries; i++) {
-                const book = bookOrder[Math.floor(Math.random() * bookOrder.length)];
-                const chapter = randomInt(1, bookChapterCounts[book]);
-                let fetchRef = book.replace(/\s/g, '') + (bookChapterCounts[book] === 1 ? '1:1-' + bookVerseCounts[book] : chapter);
-                const data = await apiFetch(fetchRef);
-                if (!data?.verses?.length) continue;
-                const unseen = data.verses
-                    .map((v, idx) => ({ text: v.text, num: idx + 1 }))
-                    .filter(v => !completed.includes(`${book} ${chapter}:${v.num}`));
-                if (!unseen.length) continue;
-                const { text, num } = unseen[randomInt(0, unseen.length - 1)];
-                let clean = text.replace(/^\d+\s*/, '').replace(/\s+/g, ' ').trim();
-                clean = clean.replace(/‘/g, "'").replace(/’/g, "'").replace(/“/g, '"').replace(/”/g, '"');
-                return { verseText: clean, reference: `${book} ${chapter}:${num}` };
-            }
-            throw new Error("No unseen verse");
-        }
-        async function fetchVerse(ref) {
-            const normalized = ref.replace(/\s/g, '');
-            const data = await apiFetch(normalized);
-            if (!data) throw new Error("API error");
-            let clean = data.text.replace(/^\d+\s*/, '').replace(/\s+/g, ' ').trim();
-            clean = clean.replace(/‘/g, "'").replace(/’/g, "'").replace(/“/g, '"').replace(/”/g, '"');
-            return { verseText: clean, reference: data.reference };
-        }
-        function randomInt(min, max) {
-            return Math.floor(Math.random() * (max - min + 1)) + min;
-        }
-        async function apiFetch(ref) {
-            const res = await fetch(`${API}${encodeURIComponent(ref)}?translation=kjv`);
-            if (!res.ok) throw new Error("API error");
-            return await res.json();
-        }
-        function fallbackVerse() {
-            const fallback = { text: "For God so loved the world, that he gave his only begotten Son", ref: "John 3:16" };
-            currentVerse = fallback.text;
-            currentRef = fallback.ref;
-            renderVerse(currentVerse);
-            refEl.textContent = currentRef;
-            inputEl.disabled = false;
-            inputEl.focus();
-        }
-        function renderVerse(text, hiddenWords = new Set()) {
-            verseEl.innerHTML = '';
-            verseEl.className = '';
-            const words = text.split(' ');
-            let charIndex = 0;
-            words.forEach((word, wordIndex) => {
-                const wordSpan = document.createElement('span');
-                wordSpan.className = 'word';
-                const isHidden = hiddenWords.has(wordIndex);
-                word.split('').forEach(ch => {
-                    const s = document.createElement('span');
-                    s.className = 'letter';
-                    s.id = `c${charIndex}`;
-                    s.textContent = isHidden ? '' : ch;
-                    if (isHidden) s.classList.add('invisible');
-                    wordSpan.appendChild(s);
-                    charIndex++;
+
+            /* =====================================================================
+               COMPLETION SOUND (Tone.js)
+               ===================================================================== */
+            let completionSynth = null;
+            let completionInit = null;
+
+            function initCompletionSound() {
+                if (completionInit || !window.Tone) return completionInit;
+                completionInit = (async () => {
+                    await Tone.start();
+                    const reverb = new Tone.Reverb({ decay: 8, wet: 0.6 }).toDestination();
+                    const delay = new Tone.FeedbackDelay('8n', 0.4).toDestination();
+                    const filter = new Tone.Filter(800, 'lowpass');
+                    filter.connect(reverb);
+                    filter.connect(delay);
+                    completionSynth = new Tone.PolySynth(Tone.FMSynth, {
+                        harmonicity: 3,
+                        modulationIndex: 10,
+                        oscillator: { type: 'sine' },
+                        envelope: { attack: 0.8, decay: 1, sustain: 0.6, release: 2 },
+                        modulation: { type: 'square' },
+                        volume: -9
+                    }).connect(filter);
+                })().catch(err => {
+                    completionInit = null;
+                    console.warn('Completion sound unavailable:', err);
                 });
-                verseEl.appendChild(wordSpan);
-                if (wordIndex < words.length - 1) {
-                    const space = document.createElement('span');
-                    space.className = 'letter space';
-                    space.id = `c${charIndex}`;
-                    space.textContent = '\u00A0';
-                    verseEl.appendChild(space);
-                    charIndex++;
-                }
-            });
-        }
-        /* Typing Event Handlers */
-        inputEl.addEventListener('keydown', e => {
-            if (e.key === 'Backspace') {
-                if (lastErrorIndex >= 0 && typedSoFar.length === lastErrorIndex) {
-                    lastErrorIndex = -1;
-                    updateLetterClasses();
-                }
-                e.preventDefault();
-                return;
+                return completionInit;
             }
-            if (e.key.length === 1) {
-                if (startTime === 0) {
-                    startTime = performance.now();
+            function playCompletionSound() {
+                if (completionSynth) completionSynth.triggerAttackRelease('C3', '8n');
+            }
+            // Audio must be unlocked by a user gesture. "click" also fires for taps and keyboard-activated buttons.
+            // (The old code listened to click AND touchstart, which built two synths on touch devices.)
+            document.addEventListener('click', () => {
+                if (!completionSynth) initCompletionSound();
+            });
+
+            /* =====================================================================
+               VERSE LOADING & RENDERING
+               ===================================================================== */
+            function resetTypingState() {
+                typedSoFar = '';
+                lastErrorIndex = -1;
+                errorCount = 0;
+                startTime = 0;
+                inputEl.value = '';
+                inputEl.disabled = true;
+            }
+
+            async function loadVerse(ref = null, text = null) {
+                const token = ++loadToken;
+                verseEl.className = 'loading';
+                verseEl.textContent = 'Fetching a new verse…';
+                refEl.textContent = '';
+                resetTypingState();
+                try {
+                    let verse;
+                    if (text) verse = { verseText: text, reference: ref };
+                    else if (ref) verse = await fetchVerse(ref);
+                    else verse = await fetchUnseenVerse();
+                    if (token !== loadToken) return;       // user navigated away while loading
+
+                    currentVerse = verse.verseText;
+                    currentRef = verse.reference;
+                    const hidden = (currentMode === 'memory' && currentMemoryItem) ? new Set(currentMemoryItem.hidden) : new Set();
+                    renderVerse(currentVerse, hidden);
+                    refEl.textContent = currentRef;
+                    inputEl.disabled = false;
+                    inputEl.focus();
+                } catch (err) {
+                    if (token !== loadToken) return;
+                    showLoadError(err, () => loadVerse(ref, text));
                 }
+            }
+
+            // Replaces the old silent "John 3:16" fallback, which recorded John 3:16 as completed
+            // whenever the API was unreachable.
+            function showLoadError(err, retry) {
+                verseEl.className = '';
+                const msg = err?.status === 429
+                    ? 'The Bible service is busy (too many requests). Please wait a few seconds and try again.'
+                    : 'Couldn\u2019t reach the Bible service. Check your connection and try again.';
+                verseEl.innerHTML = `<p class="loading">${msg}</p><button type="button" class="retry-btn">Retry</button>`;
+                verseEl.querySelector('.retry-btn').addEventListener('click', e => { e.stopPropagation(); retry(); });
+            }
+
+            function renderVerse(text, hiddenWords = new Set()) {
+                verseEl.className = '';
+                const frag = document.createDocumentFragment();
+                const words = text.split(' ');
+                let charIndex = 0;
+                words.forEach((word, wordIndex) => {
+                    const wordSpan = document.createElement('span');
+                    wordSpan.className = 'word';
+                    const isHidden = hiddenWords.has(wordIndex);
+                    for (const ch of word) {
+                        const s = document.createElement('span');
+                        s.className = isHidden ? 'letter invisible' : 'letter';
+                        s.id = `c${charIndex++}`;
+                        s.textContent = isHidden ? '' : ch;
+                        wordSpan.appendChild(s);
+                    }
+                    frag.appendChild(wordSpan);
+                    if (wordIndex < words.length - 1) {
+                        const space = document.createElement('span');
+                        space.className = 'letter space';
+                        space.id = `c${charIndex++}`;
+                        space.textContent = '\u00A0';
+                        frag.appendChild(space);
+                    }
+                });
+                verseEl.replaceChildren(frag);
+            }
+
+            function updateLetterClasses() {
+                for (let i = 0; i < currentVerse.length; i++) {
+                    const el = $(`c${i}`);
+                    if (!el) continue;
+                    const isSpace = el.classList.contains('space');
+                    const isInvisible = el.classList.contains('invisible');
+                    if (i < typedSoFar.length) {
+                        el.className = 'letter correct' + (isSpace ? ' space' : '');
+                        el.textContent = isSpace ? '\u00A0' : currentVerse[i];
+                    } else if (i === lastErrorIndex) {
+                        el.className = 'letter error' + (isSpace ? ' space' : '') + (isInvisible ? ' invisible-was' : '');
+                        el.textContent = isSpace ? '\u00A0' : currentVerse[i];
+                    } else {
+                        const wasHidden = isInvisible || el.classList.contains('invisible-was');
+                        el.className = 'letter' + (isSpace ? ' space' : '') + (wasHidden ? ' invisible' : '');
+                        el.textContent = wasHidden ? '' : (isSpace ? '\u00A0' : currentVerse[i]);
+                    }
+                }
+            }
+
+            /* =====================================================================
+               TYPING
+               ===================================================================== */
+            inputEl.addEventListener('keydown', e => {
+                if (e.isComposing || e.ctrlKey || e.metaKey) return;
+                if (e.key === 'Backspace') {
+                    if (lastErrorIndex >= 0 && typedSoFar.length === lastErrorIndex) {
+                        lastErrorIndex = -1;
+                        updateLetterClasses();
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                if (e.key.length !== 1) return;
+                if (startTime === 0) startTime = performance.now();
                 const nextIndex = typedSoFar.length;
                 if (nextIndex >= currentVerse.length) { e.preventDefault(); return; }
                 if (lastErrorIndex >= 0 && nextIndex !== lastErrorIndex) { e.preventDefault(); return; }
@@ -1799,1010 +1840,795 @@ document.documentElement.addEventListener('touchstart', initCompletionSound, { o
                     errorCount++;
                     updateLetterClasses();
                     const el = $(`c${nextIndex}`);
-                    if (el) {
+                    if (el) {                                   // restart the shake animation
                         el.style.animation = 'none';
-                        setTimeout(() => { el.style.animation = ''; }, 10);
+                        void el.offsetWidth;
+                        el.style.animation = '';
                     }
                     e.preventDefault();
                 }
-            }
-        });
-        inputEl.addEventListener('input', () => {
-            const value = inputEl.value;
-            let mismatch = -1;
-            for (let i = 0; i < value.length; i++) {
-                if (value[i] !== currentVerse[i]) { mismatch = i; break; }
-            }
-            if (mismatch === -1 && value.length <= currentVerse.length) {
-                typedSoFar = value;
-                lastErrorIndex = -1;
-            } else {
-                typedSoFar = value.substring(0, mismatch);
-                lastErrorIndex = mismatch;
-                inputEl.value = typedSoFar;
-            }
-            updateLetterClasses();
-            if (typedSoFar === currentVerse) {
-                const endTime = performance.now();
-                const timeSec = (endTime - startTime) / 1000 || 0.001;
-                const words = currentVerse.split(' ').length;
-                const wpm = Math.round((words / timeSec) * 60);
-                const accuracy = (currentVerse.length / (currentVerse.length + errorCount)) * 100;
-                completeVerse(wpm, accuracy);
-            }
-        });
-        function updateLetterClasses() {
-            for (let i = 0; i < currentVerse.length; i++) {
-                const el = $(`c${i}`);
-                if (!el) continue;
-                const isInvisible = el.classList.contains('invisible');
-                if (i < typedSoFar.length) {
-                    el.className = 'letter correct';
-                    el.textContent = currentVerse[i];
-                } else if (i === lastErrorIndex) {
-                    el.className = 'letter error';
-                    el.textContent = currentVerse[i];
+            });
+
+            // Mobile keyboards often don't report keys in keydown, so "input" is the source of truth.
+            inputEl.addEventListener('input', () => {
+                if (startTime === 0) startTime = performance.now();
+                const value = inputEl.value;
+                let mismatch = -1;
+                for (let i = 0; i < value.length; i++) {
+                    if (value[i] !== currentVerse[i]) { mismatch = i; break; }
+                }
+                if (mismatch === -1 && value.length <= currentVerse.length) {
+                    typedSoFar = value;
+                    lastErrorIndex = -1;
                 } else {
-                    el.className = el.classList.contains('space') ? 'letter space' : 'letter';
-                    if (isInvisible) {
-                        el.textContent = '';
-                        if (!el.classList.contains('invisible')) el.classList.add('invisible');
-                    } else {
-                        el.textContent = currentVerse[i];
-                    }
+                    if (mismatch === -1) mismatch = currentVerse.length;
+                    if (mismatch !== lastErrorIndex) errorCount++;
+                    typedSoFar = value.substring(0, mismatch);
+                    lastErrorIndex = mismatch < currentVerse.length ? mismatch : -1;
+                    inputEl.value = typedSoFar;
                 }
-            }
-        }
-        /* Focus Handling */
-        document.addEventListener('click', (e) => {
-            if (gameUI.style.display === 'block' && !modal.contains(e.target) && !confirmModal.contains(e.target) && !deleteModal.contains(e.target) && !createModal.contains(e.target) && !memoryModal.contains(e.target) && !refSelectorModal.contains(e.target) && !memoryDeleteModal.contains(e.target) && !customAlertModal.contains(e.target) && !aboutModal.contains(e.target)) {
-                inputEl.focus();
-            }
-        });
-        /* Verse Completion */
-        function completeVerse(wpm, accuracy) {
-            inputEl.disabled = true;
-            const updateMetrics = currentMode !== 'memory';
-            markCompleted(currentRef, updateMetrics ? wpm : null, updateMetrics ? accuracy : null);
-            unlock.currentTime = 0;
-            unlock.play().catch(() => {});
-            mainCard.classList.add('completion-glow');
-	    playCompletionSound();
-            setTimeout(() => mainCard.classList.remove('completion-glow'), 2000);
-            if (currentMode === 'memory') {
-                const bank = getMemoryBank();
-                const itemIndex = bank.findIndex(b => b.ref === currentRef);
-                if (itemIndex !== -1) {
-                    const item = bank[itemIndex];
-                    const wordCount = currentVerse.split(' ').length;
-                    if (item.hidden.length < wordCount) {
-                        if (errorCount === 0) {
-                            let newHidden;
-                            do {
-                                newHidden = Math.floor(Math.random() * wordCount);
-                            } while (item.hidden.includes(newHidden));
-                            item.hidden.push(newHidden);
-                            currentMemoryItem.hidden = item.hidden;
-                            bank[itemIndex] = item;
-                            saveMemoryBank(bank);
-                            setTimeout(() => loadVerse(currentRef, currentVerse), 1800);
-                        } else {
-                            setTimeout(() => loadVerse(currentRef, currentVerse), 1800);
-                        }
-                    } else {
-                        showCustomAlert('You have mastered this verse!');
-                        setTimeout(showMemoryModal, 1800);
-                    }
-                }
-            } else if (currentMode === 'choice') {
-                if (isChapterMode) {
-                    currentVerseNum++;
-                    if (currentVerseNum <= totalVerses) {
-                        setTimeout(() => loadVerse(`${currentBook} ${currentChapter}:${currentVerseNum}`), 1800);
-                    } else {
-                        showCustomAlert('Chapter completed!');
-                        isChapterMode = false;
-                        setTimeout(() => {
-                            gameUI.style.display = 'none';
-                            mainMenu.style.display = 'block';
-                        }, 1800);
-                    }
-                } else {
-                    setTimeout(() => {
-                        gameUI.style.display = 'none';
-                        mainMenu.style.display = 'block';
-                    }, 1800);
-                }
-            } else {
-                setTimeout(() => loadVerse(), 1800);
-            }
-        }
-        /* Progress Modal Functions */
-        let currentView = 'overview';
-        let progressCurrentBook = null;
-        $('close-modal').onclick = () => {
-            modal.style.display = 'none';
-            if (gameUI.style.display === 'block') inputEl.focus();
-        };
-        backBtn.onclick = () => {
-            if (currentView === 'chapter-text') {
-                showBookView(progressCurrentBook);
-            } else if (currentView === 'chapter') {
-                showBibleMap();
-            } else {
-                showOverview();
-            }
-        };
-        function showOverview() {
-            currentView = 'overview';
-            statsEl.style.display = 'grid';
-            detailView.style.display = 'none';
-            renderOverview();
-        }
-        function renderOverview() {
-            const p = getProgress();
-            const journeyDays = p.first ? Math.floor((Date.now() - new Date(p.first)) / 86400000) + 1 : 0;
-            const avgWPM = p.verseCount > 0 ? Math.round(p.totalWPM / p.verseCount) : 0;
-            const stats = [
-                { label: 'Verses', value: p.completed.length, id: 'verses' },
-                { label: 'Days', value: journeyDays, id: 'days' },
-                { label: 'Typing', value: p.maxWPM || 0, id: 'typing' }
-            ];
-            statsEl.innerHTML = '';
-            stats.forEach(s => {
-                const div = document.createElement('div');
-                div.className = 'stat';
-                div.innerHTML = `<strong>${s.value}</strong><small>${s.label}</small>`;
-                div.onclick = async () => {
-                    statsEl.style.display = 'none';
-                    detailView.style.display = 'flex';
-                    detailTitle.textContent = s.label;
-                    if (s.id === 'verses') {
-                        currentView = 'book';
-                        showBibleMap();
-                    } else {
-                        currentView = 'other';
-                        if (s.id === 'days') {
-                            renderDaysDetail();
-                        } else if (s.id === 'typing') {
-                            await renderTypingDetail(avgWPM);
-                        }
-                    }
-                };
-                statsEl.appendChild(div);
-            });
-        }
-        function showBibleMap() {
-            currentView = 'book';
-            detailTitle.textContent = 'Bible Books';
-            renderBibleMap();
-        }
-        function renderBibleMap() {
-            const p = getProgress();
-            const bookStats = {};
-            p.completed.forEach(ref => {
-                const book = getBookFromRef(ref);
-                if (book) {
-                    bookStats[book] = (bookStats[book] || 0) + 1;
+                updateLetterClasses();
+                if (typedSoFar === currentVerse) {
+                    const timeSec = Math.max((performance.now() - startTime) / 1000, 0.001);
+                    const words = currentVerse.split(' ').length;
+                    const wpm = Math.round((words / timeSec) * 60);
+                    const accuracy = (currentVerse.length / (currentVerse.length + errorCount)) * 100;
+                    completeVerse(wpm, accuracy);
                 }
             });
-            detailContent.innerHTML = '<div class="books-grid"></div>';
-            const grid = detailContent.querySelector('.books-grid');
-            bookOrder.forEach(book => {
-                const total = bookVerseCounts[book] || 1;
-                const done = bookStats[book] || 0;
-                const percent = done / total;
-                const bubble = document.createElement('div');
-                bubble.className = 'book-bubble';
-                if (percent >= 1) bubble.classList.add('complete');
-                else if (percent > 0) bubble.classList.add('partial');
-                const nameLines = book.split(' ');
-                const nameHTML = nameLines.map(line => `<div>${line}</div>`).join('');
-                bubble.innerHTML = `
-                    <div class="book-name">${nameHTML}</div>
-                    <div class="book-count">${done}/${total}</div>
-                `;
-                bubble.onclick = () => showBookView(book);
-                grid.appendChild(bubble);
+
+            inputEl.addEventListener('paste', e => e.preventDefault());   // no pasting the verse
+
+            // Keep the hidden input focused while typing (but don't steal focus from controls/modals).
+            document.addEventListener('click', e => {
+                if (gameUI.style.display !== 'block' || anyModalOpen()) return;
+                if (e.target.closest('#volume-control, #profile-list, button, input, a')) return;
+                if (!inputEl.disabled) inputEl.focus();
             });
-        }
-        function showBookView(book) {
-            currentView = 'chapter';
-            progressCurrentBook = book;
-            detailTitle.textContent = book;
-            const p = getProgress();
-            const chapters = bookChapterCounts[book];
-            const chapterStats = {};
-            p.completed.forEach(ref => {
-                const thisBook = getBookFromRef(ref);
-                if (thisBook === book) {
-                    const chStr = ref.substring(thisBook.length + 1).split(':')[0];
-                    const ch = parseInt(chStr);
-                    chapterStats[ch] = (chapterStats[ch] || 0) + 1;
-                }
-            });
-            const gridHTML = Array.from({ length: chapters }, (_, i) => {
-                const ch = i + 1;
-                const done = chapterStats[ch] || 0;
-                const cacheKey = `${book} ${ch}`;
-                const cached = chapterDataCache[cacheKey];
-                const total = cached ? cached.total : 0;
-                const showTotal = total > 0 ? total : '?';
-                let classes = 'chapter-bubble';
-                const percent = total > 0 ? done / total : (done > 0 ? 0.1 : 0);
-                if (percent >= 1) classes += ' complete';
-                else if (percent > 0) classes += ' partial';
-                return `
-                    <div class="${classes}" data-chapter="${ch}">
-                        <div class="chapter-num">${ch}</div>
-                        <div class="chapter-count">${done}/${showTotal}</div>
-                    </div>
-                `;
-            }).join('');
-            lastBookViewHTML = `<div class="chapters-grid">${gridHTML}</div>`;
-            detailContent.innerHTML = lastBookViewHTML;
-            detailContent.querySelectorAll('.chapter-bubble').forEach(bubble => {
-                bubble.onclick = (e) => {
-                    e.stopPropagation();
-                    const ch = parseInt(bubble.dataset.chapter);
-                    showChapterText(book, ch);
-                };
-            });
-        }
-        async function showChapterText(book, chapter) {
-            currentView = 'chapter-text';
-            const cacheKey = `${book} ${chapter}`;
-            let data = chapterDataCache[cacheKey];
-            if (!data) {
-                detailContent.innerHTML = '<div class="loading">Loading chapter...</div>';
-                try {
-                    let fetchRef = book.replace(/\s/g, '') + (bookChapterCounts[book] === 1 ? '1:1-' + bookVerseCounts[book] : chapter);
-                    data = await apiFetch(fetchRef);
-                    chapterDataCache[cacheKey] = { total: data.verses.length, verses: data.verses };
-                    localStorage.setItem('scripture-flow-chapter-cache', JSON.stringify(chapterDataCache));
-                } catch (e) {
-                    detailContent.innerHTML = `<p style="text-align:center; color:var(--text-muted);">Failed to load chapter.</p>`;
-                    return;
-                }
+
+            /* =====================================================================
+               VERSE COMPLETION
+               ===================================================================== */
+            function scheduleNext(fn) {
+                clearTimeout(advanceTimer);
+                advanceTimer = setTimeout(fn, ADVANCE_DELAY);
             }
-            detailTitle.textContent = `${book} ${chapter}`;
-            renderChapterText(detailContent, book, chapter, false);
-            const bubbleHTML = lastBookViewHTML.match(
-                new RegExp(`<div class="chapter-bubble[^"]*" data-chapter="${chapter}"[^>]*>(.*?)</div>`, 's')
-            )?.[0] || '';
-            if (bubbleHTML) {
-                const done = getProgress().completed.filter(r => r.startsWith(`${book} ${chapter}:`)).length;
-                const total = data.verses.length;
-                const updated = bubbleHTML.replace(/\d+\/\?/, `${done}/${total}`);
-                lastBookViewHTML = lastBookViewHTML.replace(bubbleHTML, updated);
-            }
-        }
-        function renderDaysDetail() {
-            const p = getProgress();
-            const journeyDays = p.first ? Math.floor((Date.now() - new Date(p.first)) / 86400000) + 1 : 0;
-            detailContent.innerHTML = `
-                <div class="stat-detail">
-                    <strong>Journey Length:</strong> ${journeyDays} day${journeyDays !== 1 ? 's' : ''}
-                    <p>Total days since your first verse completion.</p>
-                    <strong>Current Streak:</strong> ${p.streak} day${p.streak !== 1 ? 's' : ''}
-                    <p>Consecutive days with at least one verse completed.</p>
-                </div>
-            `;
-        }
-        async function renderTypingDetail(overallAvgWPM) {
-            const p = getProgress();
-            let fastestText = p.fastestText || '';
-            if (!fastestText && p.fastestRef && p.fastestRef !== '—') {
-                try {
-                    const data = await apiFetch(p.fastestRef.replace(/\s/g, ''));
-                    fastestText = data.text.replace(/^\d+\s*/, '').trim();
-                    p.fastestText = fastestText;
-                    saveProgress(p);
-                } catch (e) {
-                    fastestText = '';
-                }
-            }
-            const overallAvgAccuracy = p.verseCount > 0 ? Math.round(p.totalAccuracy / p.verseCount) : 0;
-            const recentCount = p.recentWPMs.length;
-            const currentAvgWPM = recentCount > 0 ? Math.round(p.recentWPMs.reduce((a, b) => a + b, 0) / recentCount) : 0;
-            const currentAvgAccuracy = recentCount > 0 ? Math.round(p.recentAccuracies.reduce((a, b) => a + b, 0) / recentCount) : 0;
-            const fastestRef = p.fastestRef || '—';
-            detailContent.innerHTML = `
-                <div class="stat-detail">
-                    <strong>Overall Average WPM:</strong> ${overallAvgWPM}
-                    <p>The average words per minute across all completed verses, calculated as the total sum of individual verse WPMs divided by the number of verses. Each verse WPM = (number of words / typing time in minutes).</p>
-                    <strong>Current Average WPM:</strong> ${currentAvgWPM}
-                    <p>Average WPM of the last ${recentCount} verse${recentCount !== 1 ? 's' : ''}.</p>
-                    <strong>Max WPM:</strong> ${p.maxWPM || 0}
-                    <p>Your highest speed on a single verse.</p>
-                    <strong>Fastest Verse: </strong><span style="color: var(--text);">${fastestRef}</span>
-                    <p style="margin-top:0.5rem; font-style:italic;">${fastestText}</p>
-                    <strong>Overall Average Accuracy:</strong> ${overallAvgAccuracy}%
-                    <p>The average accuracy across all completed verses, where per-verse accuracy = (verse characters / (characters + error attempts)) × 100.</p>
-                    <strong>Current Average Accuracy:</strong> ${currentAvgAccuracy}%
-                    <p>Average accuracy of the last ${recentCount} verse${recentCount !== 1 ? 's' : ''}.</p>
-                </div>
-            `;
-        }
-        /* Memory Modal Functions */
-        function showMemoryModal() {
-            memoryModal.style.display = 'flex';
-            renderMemoryList();
-        }
-        function renderMemoryList() {
-            const bank = getMemoryBank();
-            if (bank.length === 0) {
-                memoryContent.style.display = 'flex';
-                memoryContent.style.justifyContent = 'center';
-                memoryContent.style.alignItems = 'center';
-                memoryContent.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Add verses to your memory bank.</p>';
-                return;
-            }
-            memoryContent.style.display = 'grid';
-            memoryContent.innerHTML = '';
-            bank.forEach(item => {
-                const wordCount = item.text.split(' ').length;
-                const done = item.hidden.length;
-                const div = document.createElement('div');
-                div.className = 'memory-bubble';
-                const percent = done / wordCount;
-                if (percent >= 1) div.classList.add('complete');
-                else if (percent > 0) div.classList.add('partial');
-                div.innerHTML = `<div class="memory-ref">${item.ref}</div><div class="memory-count">${done}/${wordCount}</div>`;
-                const delBtn = document.createElement('button');
-                delBtn.className = 'delete-btn';
-                delBtn.textContent = 'X';
-                delBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    showConfirmDeleteMemory(item.ref);
-                };
-                div.appendChild(delBtn);
-                div.onclick = () => {
-                    currentMemoryItem = item;
-                    memoryModal.style.display = 'none';
-                    mainMenu.style.display = 'none';
-                    gameUI.style.display = 'block';
-                    marioUI.style.display = 'none';
-                    unlockAudio();
-                    loadVerse(item.ref, item.text);
-                };
-                memoryContent.appendChild(div);
-            });
-        }
-        addMemory.onclick = () => {
-            showRefSelector(false, () => {
-                renderMemoryList();
-            });
-        };
-        closeMemory.onclick = () => {
-            memoryModal.style.display = 'none';
-        };
-        function showConfirmDeleteMemory(ref) {
-            deleteMemoryName.textContent = ref;
-            memoryDeleteModal.style.display = 'flex';
-        }
-        confirmDeleteMemory.onclick = () => {
-            const ref = deleteMemoryName.textContent;
-            let bank = getMemoryBank();
-            bank = bank.filter(i => i.ref !== ref);
-            saveMemoryBank(bank);
-            memoryDeleteModal.style.display = 'none';
-            renderMemoryList();
-        };
-        cancelDeleteMemory.onclick = () => {
-            memoryDeleteModal.style.display = 'none';
-        };
-        /* Ref Selector Functions */
-        function showRefSelector(isForChoice, callback) {
-            currentIsChoice = isForChoice;
-            currentSelectorCallback = callback;
-            selectorCurrentView = 'books';
-            selectorCurrentBook = null;
-            selectorCurrentChapter = null;
-            selectorTitle.textContent = isForChoice ? 'Select Verse or Chapter' : 'Select Verse to Memorize';
-            selectorBack.style.display = 'none';
-            refSelectorModal.style.display = 'flex';
-            showBooksSelector();
-        }
-        closeSelector.onclick = () => {
-            refSelectorModal.style.display = 'none';
-        };
-        selectorBack.onclick = () => {
-            if (selectorCurrentView === 'chapter-text') {
-                showChaptersSelector(selectorCurrentBook);
-            } else if (selectorCurrentView === 'chapters') {
-                showBooksSelector();
-            }
-        };
-        function showBooksSelector() {
-            selectorCurrentView = 'books';
-            selectorBack.style.display = 'none';
-            selectorContent.innerHTML = '<div class="books-grid"></div>';
-            const grid = selectorContent.querySelector('.books-grid');
-            const p = getProgress();
-            const bookStats = {};
-            p.completed.forEach(ref => {
-                const book = getBookFromRef(ref);
-                if (book) {
-                    bookStats[book] = (bookStats[book] || 0) + 1;
-                }
-            });
-            bookOrder.forEach(book => {
-                const total = bookVerseCounts[book] || 1;
-                const done = bookStats[book] || 0;
-                const percent = done / total;
-                const bubble = document.createElement('div');
-                bubble.className = 'book-bubble';
-                if (percent >= 1) bubble.classList.add('complete');
-                else if (percent > 0) bubble.classList.add('partial');
-                const nameLines = book.split(' ');
-                const nameHTML = nameLines.map(line => `<div>${line}</div>`).join('');
-                bubble.innerHTML = `
-                    <div class="book-name">${nameHTML}</div>
-                    <div class="book-count">${done}/${total}</div>
-                `;
-                bubble.onclick = () => showChaptersSelector(book);
-                grid.appendChild(bubble);
-            });
-        }
-        function showChaptersSelector(book) {
-            selectorCurrentView = 'chapters';
-            selectorCurrentBook = book;
-            selectorTitle.textContent = book;
-            selectorBack.style.display = 'block';
-            const chapters = bookChapterCounts[book];
-            const p = getProgress();
-            const chapterStats = {};
-            p.completed.forEach(ref => {
-                const thisBook = getBookFromRef(ref);
-                if (thisBook === book) {
-                    const chStr = ref.substring(thisBook.length + 1).split(':')[0];
-                    const ch = parseInt(chStr);
-                    chapterStats[ch] = (chapterStats[ch] || 0) + 1;
-                }
-            });
-            const gridHTML = Array.from({ length: chapters }, (_, i) => {
-                const ch = i + 1;
-                const done = chapterStats[ch] || 0;
-                const cacheKey = `${book} ${ch}`;
-                const cached = chapterDataCache[cacheKey];
-                const total = cached ? cached.total : 0;
-                const showTotal = total > 0 ? total : '?';
-                let classes = 'chapter-bubble';
-                const percent = total > 0 ? done / total : (done > 0 ? 0.1 : 0);
-                if (percent >= 1) classes += ' complete';
-                else if (percent > 0) classes += ' partial';
-                return `
-                    <div class="${classes}" data-chapter="${ch}">
-                        <div class="chapter-num">${ch}</div>
-                        <div class="chapter-count">${done}/${showTotal}</div>
-                    </div>
-                `;
-            }).join('');
-            selectorContent.innerHTML = `<div class="chapters-grid">${gridHTML}</div>`;
-            selectorContent.querySelectorAll('.chapter-bubble').forEach(bubble => {
-                bubble.onclick = () => {
-                    const ch = parseInt(bubble.dataset.chapter);
-                    selectorCurrentChapter = ch;
-                    showChapterSelector(book, ch);
-                };
-            });
-        }
-        async function showChapterSelector(book, chapter) {
-            selectorCurrentView = 'chapter-text';
-            selectorTitle.textContent = `${book} ${chapter}`;
-            const cacheKey = `${book} ${chapter}`;
-            let data = chapterDataCache[cacheKey];
-            if (!data) {
-                selectorContent.innerHTML = '<div class="loading">Loading verses...</div>';
-                try {
-                    let fetchRef = book.replace(/\s/g, '') + (bookChapterCounts[book] === 1 ? '1:1-' + bookVerseCounts[book] : chapter);
-                    data = await apiFetch(fetchRef);
-                    chapterDataCache[cacheKey] = { total: data.verses.length, verses: data.verses };
-                    localStorage.setItem('scripture-flow-chapter-cache', JSON.stringify(chapterDataCache));
-                } catch (e) {
-                    selectorContent.innerHTML = `<p style="text-align:center; color:var(--text-muted);">Failed to load chapter.</p>`;
-                    return;
-                }
-            }
-            renderChapterText(selectorContent, book, chapter, true);
-        }
-        function renderChapterText(container, book, chapter, isSelector) {
-            const cacheKey = `${book} ${chapter}`;
-            const data = chapterDataCache[cacheKey];
-            const p = getProgress();
-            const completedSet = new Set(p.completed);
-            const versesHTML = data.verses.map(v => {
-                const verseNum = v.verse;
-                const ref = `${book} ${chapter}:${verseNum}`;
-                const isCompleted = completedSet.has(ref);
-                const cleanText = v.text.replace(/^\d+\s*/, '').replace(/\s+/g, ' ').trim().replace(/‘/g, "'").replace(/’/g, "'").replace(/“/g, '"').replace(/”/g, '"');
-                return `
-                    <div class="verse ${isCompleted ? 'completed' : ''}">
-                        <button class="verse-btn add-btn" data-ref="${ref}" data-text="${encodeURIComponent(cleanText)}">
-                            <i data-lucide="brain"></i>
-                        </button>
-                        <span class="verse-number">${verseNum}</span>
-                        <span class="verse-text">${cleanText}</span>
-                        <button class="verse-btn type-btn" data-ref="${ref}">
-                            <i data-lucide="keyboard"></i>
-                        </button>
-                    </div>
-                `;
-            }).join('');
-            let html = `<div class="chapter-text">${versesHTML}</div>`;
-            html = `<div class="chapter-options"><button class="type-entire-chapter">Type Entire Chapter</button></div>` + html;
-            container.innerHTML = html;
-            lucide.createIcons();
-            container.querySelectorAll('.add-btn').forEach(btn => {
-                btn.onclick = () => {
-                    const ref = btn.dataset.ref;
-                    const text = decodeURIComponent(btn.dataset.text);
+
+            function completeVerse(wpm, accuracy) {
+                inputEl.disabled = true;
+                const trackMetrics = currentMode !== 'memory';
+                markCompleted(currentRef, trackMetrics ? wpm : null, trackMetrics ? accuracy : null);
+                gameUI.classList.add('completion-glow');
+                playCompletionSound();
+                setTimeout(() => gameUI.classList.remove('completion-glow'), 2000);
+
+                if (currentMode === 'memory') {
                     const bank = getMemoryBank();
-                    if (bank.some(i => i.ref === ref)) {
-                        showCustomAlert('Already in Memory Bank');
+                    const item = bank.find(b => b.ref === currentRef);
+                    if (!item) { scheduleNext(() => showView('menu')); return; }
+                    const wordCount = currentVerse.split(' ').length;
+                    if (item.hidden.length >= wordCount) {
+                        showCustomAlert('You have mastered this verse!');
+                        scheduleNext(() => { showView('menu'); showMemoryModal(); });
                         return;
                     }
-                    bank.push({ref, text, hidden: []});
-                    saveMemoryBank(bank);
-                    renderMemoryList();
-                    showCustomAlert('Added to Memory Bank');
-                    if (isSelector && !currentIsChoice) {
-                        refSelectorModal.style.display = 'none';
-                        const [b, rest] = ref.split(' ');
-                        const [c, v] = rest.split(':');
-                        currentSelectorCallback(b, parseInt(c), parseInt(v));
+                    if (errorCount === 0) {
+                        // Pick a random word that isn't hidden yet (no unbounded do/while loop).
+                        const remaining = [...Array(wordCount).keys()].filter(i => !item.hidden.includes(i));
+                        item.hidden.push(remaining[randomInt(0, remaining.length - 1)]);
+                        saveMemoryBank(bank);
+                        currentMemoryItem = item;
                     }
-                };
-            });
-            container.querySelectorAll('.type-btn').forEach(btn => {
-                btn.onclick = () => {
-                    const ref = btn.dataset.ref;
-                    const [b, rest] = ref.split(' ');
-                    const [c, v] = rest.split(':');
-                    const ch = parseInt(c);
-                    const vs = parseInt(v);
-                    if (isSelector) {
-                        if (currentIsChoice) {
-                            refSelectorModal.style.display = 'none';
-                            currentSelectorCallback(b, ch, vs);
+                    scheduleNext(() => loadVerse(currentRef, currentVerse));
+                } else if (currentMode === 'choice') {
+                    if (isChapterMode) {
+                        currentVerseNum++;
+                        if (currentVerseNum <= totalVerses) {
+                            scheduleNext(() => loadVerse(`${currentBook} ${currentChapter}:${currentVerseNum}`));
                         } else {
-                            const text = decodeURIComponent(btn.closest('.verse').querySelector('.add-btn').dataset.text);
-                            let bank = getMemoryBank();
-                            if (!bank.some(i => i.ref === ref)) {
-                                bank.push({ref, text, hidden: []});
-                                saveMemoryBank(bank);
-                            }
-                            refSelectorModal.style.display = 'none';
-                            memoryModal.style.display = 'none';
-                            currentMemoryItem = bank.find(i => i.ref === ref);
-                            mainMenu.style.display = 'none';
-                            gameUI.style.display = 'block';
-                            marioUI.style.display = 'none';
-                            currentMode = 'memory';
-                            unlockAudio();
-                            loadVerse(ref, text);
+                            isChapterMode = false;
+                            showCustomAlert('Chapter completed!');
+                            scheduleNext(() => showView('menu'));
                         }
                     } else {
-                        modal.style.display = 'none';
-                        mainMenu.style.display = 'none';
-                        gameUI.style.display = 'block';
-                        marioUI.style.display = 'none';
-                        currentMode = 'choice';
-                        isChapterMode = false;
-                        unlockAudio();
-                        loadVerse(ref);
+                        scheduleNext(() => showView('menu'));
                     }
-                };
-            });
-            const typeChapterBtn = container.querySelector('.type-entire-chapter');
-            if (typeChapterBtn) {
-                typeChapterBtn.onclick = () => {
-                    refSelectorModal.style.display = 'none';
-                    modal.style.display = 'none';
-                    memoryModal.style.display = 'none';
-                    mainMenu.style.display = 'none';
-                    gameUI.style.display = 'block';
-                    marioUI.style.display = 'none';
-                    currentMode = 'choice';
-                    isChapterMode = true;
-                    currentBook = book;
-                    currentChapter = chapter;
-                    totalVerses = data.total || data.verses.length;
-                    unlockAudio();
-                    loadVerse(`${book} ${chapter}:1`);
-                };
-            }
-        }
-        /* Export and Clear Functions */
-        $('export-progress').onclick = () => {
-            const p = getProgress();
-            const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `scripture-flow-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        };
-        $('clear-progress').onclick = () => {
-            modal.style.display = 'none';
-            confirmModal.style.display = 'flex';
-            confirmInput.value = '';
-            confirmClear.disabled = true;
-            confirmClear.classList.remove('enabled');
-            renderConfirmPhrase();
-            setTimeout(() => confirmInput.focus(), 0);
-        };
-        cancelClear.onclick = () => {
-            confirmModal.style.display = 'none';
-            modal.style.display = 'flex';
-        };
-        confirmInput.addEventListener('input', () => {
-            const value = confirmInput.value.toLowerCase();
-            const phrase = 'yes, i am sure.'.toLowerCase();
-            const spans = confirmGhost.querySelectorAll('span');
-            for (let i = 0; i < phrase.length; i++) {
-                if (i < value.length && value[i] === phrase[i]) {
-                    spans[i].classList.add('correct');
                 } else {
-                    spans[i].classList.remove('correct');
+                    scheduleNext(() => loadVerse());
                 }
             }
-            if (value === phrase) {
-                confirmClear.disabled = false;
-                confirmClear.classList.add('enabled');
-            } else {
-                confirmClear.disabled = true;
-                confirmClear.classList.remove('enabled');
+
+            /* =====================================================================
+               MODE BUTTONS & NAVIGATION
+               ===================================================================== */
+            function startSingleVerse(ref) {
+                isChapterMode = false;
+                currentMemoryItem = null;
+                startGame('choice');
+                loadVerse(ref);
             }
-        });
-        confirmClear.onclick = () => {
-            if (!confirmClear.disabled) {
-                localStorage.removeItem(STORAGE_KEY);
-                confirmModal.style.display = 'none';
+
+            function startChapter(book, chapter, total) {
+                currentMemoryItem = null;
+                isChapterMode = true;
+                currentBook = book;
+                currentChapter = chapter;
+                currentVerseNum = 1;                   // BUG FIX: was never reset, so a 2nd chapter skipped/ended early
+                totalVerses = total;
+                startGame('choice');
+                loadVerse(`${book} ${chapter}:1`);
+            }
+
+            function startMemory(item) {
+                currentMemoryItem = item;
+                isChapterMode = false;
+                startGame('memory');
+                loadVerse(item.ref, item.text);
+            }
+
+            $('random-btn').addEventListener('click', () => {
+                isChapterMode = false;
+                currentMemoryItem = null;
+                startGame('flow');
+                loadVerse();
+            });
+            $('memory-btn').addEventListener('click', showMemoryModal);
+            $('choice-btn').addEventListener('click', () => {
+                showRefSelector(true, ref => startSingleVerse(ref));
+            });
+
+            $('menu-control').addEventListener('click', () => {
+                loadToken++;                           // cancel any in-flight verse load
+                showView('menu');
+                currentMode = '';
+                isChapterMode = false;
+                currentMemoryItem = null;
+                resumeMusic();
+            });
+
+            $('mario-control').addEventListener('click', () => {
+                loadToken++;
+                showView('mario');
+                pauseMusic();
+                if (marioIframe.src === 'about:blank') {
+                    marioIframe.src = marioIframe.dataset.src;   // only load the emulator when it's actually used
+                }
+                setTimeout(() => marioIframe.focus(), 100);
+            });
+
+            $('progress-control').addEventListener('click', () => {
                 showOverview();
-            }
-        };
-        function renderConfirmPhrase() {
-            const phrase = 'Yes, I am sure.';
-            confirmGhost.innerHTML = phrase.split('').map(char => `<span class="phrase-span">${char === ' ' ? '\u00A0' : char}</span>`).join('');
-        }
-        // Particle effects
-        const canvas = $('particles');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        let particles = [];
-        for (let i = 0; i < 50; i++) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                radius: Math.random() * 2 + 1,
-                vx: Math.random() * 0.5 - 0.25,
-                vy: Math.random() * 0.5 - 0.25
+                openModal(modal);
             });
-        }
-        function animateParticles() {
-            requestAnimationFrame(animateParticles);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => {
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                ctx.fill();
-                p.x += p.vx;
-                p.y += p.vy;
-                if (p.x < 0 || p.x > canvas.width) p.vx = -p.vx;
-                if (p.y < 0 || p.y > canvas.height) p.vy = -p.vy;
+
+            $('about-control').addEventListener('click', () => openModal(aboutModal));
+            $('close-about').addEventListener('click', () => closeModal(aboutModal));
+
+            // Escape closes the top-most modal, or leaves Mario when focus is back on this page.
+            // (Key presses inside the cross-origin Mario iframe never reach this page, which is why the
+            //  old "Press ESC to exit" never worked.)
+            document.addEventListener('keydown', e => {
+                if (e.key !== 'Escape') return;
+                const open = [...allModals].filter(m => m.style.display === 'flex');
+                if (open.length) {
+                    const top = open[open.length - 1];
+                    if (top === modal) $('close-modal').click();
+                    else if (top === confirmModal) $('cancel-clear').click();
+                    else if (top === createModal) $('cancel-create').click();
+                    else if (top === customAlertModal) customAlertOk.click();
+                    else closeModal(top);
+                    e.preventDefault();
+                } else if (marioUI.style.display === 'block') {
+                    $('menu-control').click();
+                }
             });
-        }
-        animateParticles();
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
-        // Profiles
-        function initProfiles() {
-            let profiles = JSON.parse(localStorage.getItem('scripture-flow-profiles')) || [];
-            currentProfile = localStorage.getItem('scripture-flow-current-profile');
-            if (!profiles.length) {
-                currentProfile = '';
-            } else if (!currentProfile || !profiles.includes(currentProfile)) {
-                currentProfile = profiles[0];
-                localStorage.setItem('scripture-flow-current-profile', currentProfile);
+
+            /* =====================================================================
+               PROGRESS MODAL
+               ===================================================================== */
+            $('close-modal').addEventListener('click', () => {
+                closeModal(modal);
+                if (gameUI.style.display === 'block' && !inputEl.disabled) inputEl.focus();
+            });
+
+            $('back-btn').addEventListener('click', () => {
+                if (currentView === 'chapter-text') showBookView(progressCurrentBook);
+                else if (currentView === 'chapter') showBibleMap();
+                else showOverview();
+            });
+
+            function journeyDaysOf(p) {
+                return p.first ? daysBetween(p.first, localDateStr()) + 1 : 0;
             }
-            STORAGE_KEY = currentProfile ? 'kjv-typing-progress-v6-' + currentProfile : 'kjv-typing-progress-v6';
-            MEMORY_KEY = currentProfile ? 'scripture-flow-memory-bank-' + currentProfile : 'scripture-flow-memory-bank';
-            const profileControl = document.createElement('div');
-            profileControl.id = 'profile-control';
-            document.body.appendChild(profileControl);
-            const profileName = document.createElement('span');
-            profileName.id = 'profile-name';
-            profileControl.appendChild(profileName);
-            if (!profiles.length) {
-                profileName.textContent = '+';
-                profileControl.onclick = createNewProfile;
-            } else {
-                profileName.textContent = currentProfile;
-                profileControl.onclick = () => showProfileList(profiles, currentProfile);
+
+            function showOverview() {
+                currentView = 'overview';
+                statsEl.style.display = 'grid';
+                detailView.style.display = 'none';
+                const p = getProgress();
+                const avgWPM = p.verseCount > 0 ? Math.round(p.totalWPM / p.verseCount) : 0;
+                const stats = [
+                    { label: 'Verses', value: p.completed.length, id: 'verses' },
+                    { label: 'Days', value: journeyDaysOf(p), id: 'days' },
+                    { label: 'Typing', value: p.maxWPM || 0, id: 'typing' }
+                ];
+                statsEl.replaceChildren();
+                stats.forEach(s => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'stat';
+                    btn.innerHTML = `<strong>${s.value}</strong><small>${s.label}</small>`;
+                    btn.addEventListener('click', async () => {
+                        statsEl.style.display = 'none';
+                        detailView.style.display = 'flex';
+                        detailTitle.textContent = s.label;
+                        if (s.id === 'verses') {
+                            showBibleMap();
+                        } else {
+                            currentView = 'other';
+                            if (s.id === 'days') renderDaysDetail();
+                            else await renderTypingDetail(avgWPM);
+                        }
+                    });
+                    statsEl.appendChild(btn);
+                });
             }
-            profileControl.addEventListener('mouseover', () => profileControl.style.opacity = '1');
-            profileControl.addEventListener('mouseout', () => profileControl.style.opacity = '0.5');
-            const progressControl = $('progress-control');
-            progressControl.addEventListener('mouseover', () => progressControl.style.opacity = '1');
-            progressControl.addEventListener('mouseout', () => progressControl.style.opacity = '0.5');
-            const menuControl = $('menu-control');
-            menuControl.addEventListener('mouseover', () => menuControl.style.opacity = '1');
-            menuControl.addEventListener('mouseout', () => menuControl.style.opacity = '0.5');
-            const marioControl = $('mario-control');
-            marioControl.addEventListener('mouseover', () => marioControl.style.opacity = '1');
-            marioControl.addEventListener('mouseout', () => marioControl.style.opacity = '0.5');
-            if (!profiles.length) {
-                createNewProfile();
+
+            function completedCountsByBook() {
+                const counts = {};
+                getProgress().completed.forEach(ref => {
+                    const book = getBookFromRef(ref);
+                    if (book) counts[book] = (counts[book] || 0) + 1;
+                });
+                return counts;
             }
-        }
-        function createNewProfile() {
-            createModal.style.display = 'flex';
-            newProfileInput.value = '';
-            confirmCreate.disabled = true;
-            confirmCreate.classList.remove('enabled');
-            setTimeout(() => newProfileInput.focus(), 0);
-            const inputListener = () => {
-                const name = newProfileInput.value.trim();
-                if (name) {
-                    confirmCreate.disabled = false;
-                    confirmCreate.classList.add('enabled');
+
+            function completedCountsByChapter(book) {
+                const counts = {};
+                getProgress().completed.forEach(ref => {
+                    const parsed = parseRef(ref);
+                    if (parsed && parsed.book === book) counts[parsed.chapter] = (counts[parsed.chapter] || 0) + 1;
+                });
+                return counts;
+            }
+
+            // Shared by the Progress map and the verse selector (this was duplicated before).
+            function renderBooksGrid(container, onPick) {
+                const counts = completedCountsByBook();
+                const grid = document.createElement('div');
+                grid.className = 'books-grid';
+                bookOrder.forEach(book => {
+                    const total = bookVerseCounts[book];
+                    const done = counts[book] || 0;
+                    const bubble = document.createElement('div');
+                    bubble.className = 'book-bubble' + (done >= total ? ' complete' : done > 0 ? ' partial' : '');
+                    bubble.setAttribute('aria-label', `${book}, ${done} of ${total} verses`);
+                    bubble.innerHTML = `
+                        <div class="book-name">${book.split(' ').map(w => `<div>${escapeHTML(w)}</div>`).join('')}</div>
+                        <div class="book-count">${done}/${total}</div>`;
+                    makeClickable(bubble, () => onPick(book));
+                    grid.appendChild(bubble);
+                });
+                container.replaceChildren(grid);
+            }
+
+            function renderChaptersGrid(container, book, onPick) {
+                const counts = completedCountsByChapter(book);
+                const grid = document.createElement('div');
+                grid.className = 'chapters-grid';
+                for (let ch = 1; ch <= bookChapterCounts[book]; ch++) {
+                    const done = counts[ch] || 0;
+                    const total = chapterDataCache[`${book} ${ch}`]?.total || 0;
+                    const percent = total > 0 ? done / total : (done > 0 ? 0.1 : 0);
+                    const bubble = document.createElement('div');
+                    bubble.className = 'chapter-bubble' + (percent >= 1 ? ' complete' : percent > 0 ? ' partial' : '');
+                    bubble.setAttribute('aria-label', `Chapter ${ch}`);
+                    bubble.innerHTML = `<div class="chapter-num">${ch}</div><div class="chapter-count">${done}/${total || '?'}</div>`;
+                    const chapterNum = ch;
+                    makeClickable(bubble, e => { e.stopPropagation(); onPick(chapterNum); });
+                    grid.appendChild(bubble);
+                }
+                container.replaceChildren(grid);
+            }
+
+            function showBibleMap() {
+                currentView = 'book';
+                detailTitle.textContent = 'Bible Books';
+                renderBooksGrid(detailContent, showBookView);
+            }
+
+            function showBookView(book) {
+                currentView = 'chapter';
+                progressCurrentBook = book;
+                detailTitle.textContent = book;
+                renderChaptersGrid(detailContent, book, ch => showChapterText(book, ch));
+            }
+
+            async function showChapterText(book, chapter) {
+                currentView = 'chapter-text';
+                detailContent.innerHTML = '<div class="loading">Loading chapter...</div>';
+                try {
+                    const data = await getChapter(book, chapter);
+                    detailTitle.textContent = `${book} ${chapter}`;
+                    renderChapterText(detailContent, book, chapter, data, false);
+                } catch (err) {
+                    detailContent.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Failed to load chapter.</p>';
+                }
+            }
+
+            function renderDaysDetail() {
+                const p = getProgress();
+                const journeyDays = journeyDaysOf(p);
+                const streak = currentStreak(p);
+                detailContent.innerHTML = `
+                    <div class="stat-detail">
+                        <strong>Journey Length:</strong> ${journeyDays} day${journeyDays !== 1 ? 's' : ''}
+                        <p>Total days since your first verse completion.</p>
+                        <strong>Current Streak:</strong> ${streak} day${streak !== 1 ? 's' : ''}
+                        <p>Consecutive days with at least one verse completed.</p>
+                    </div>`;
+            }
+
+            async function renderTypingDetail(overallAvgWPM) {
+                const p = getProgress();
+                let fastestText = p.fastestText || '';
+                if (!fastestText && p.fastestRef) {
+                    try {
+                        fastestText = (await fetchVerse(p.fastestRef)).verseText;
+                        p.fastestText = fastestText;
+                        saveProgress(p);
+                    } catch { fastestText = ''; }
+                }
+                const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+                const overallAvgAccuracy = p.verseCount > 0 ? Math.round(p.totalAccuracy / p.verseCount) : 0;
+                const recentCount = p.recentWPMs.length;
+                const plural = recentCount !== 1 ? 's' : '';
+                detailContent.innerHTML = `
+                    <div class="stat-detail">
+                        <strong>Overall Average WPM:</strong> ${overallAvgWPM}
+                        <p>The average words per minute across all completed verses, calculated as the total sum of individual verse WPMs divided by the number of verses. Each verse WPM = (number of words / typing time in minutes).</p>
+                        <strong>Current Average WPM:</strong> ${avg(p.recentWPMs)}
+                        <p>Average WPM of the last ${recentCount} verse${plural}.</p>
+                        <strong>Max WPM:</strong> ${p.maxWPM || 0}
+                        <p>Your highest speed on a single verse.</p>
+                        <strong>Fastest Verse: </strong><span style="color: var(--text);">${escapeHTML(p.fastestRef || '—')}</span>
+                        <p style="margin-top:0.5rem; font-style:italic;">${escapeHTML(fastestText)}</p>
+                        <strong>Overall Average Accuracy:</strong> ${overallAvgAccuracy}%
+                        <p>The average accuracy across all completed verses, where per-verse accuracy = (verse characters / (characters + error attempts)) × 100.</p>
+                        <strong>Current Average Accuracy:</strong> ${avg(p.recentAccuracies)}%
+                        <p>Average accuracy of the last ${recentCount} verse${plural}.</p>
+                    </div>`;
+            }
+
+            /* =====================================================================
+               MEMORY BANK
+               ===================================================================== */
+            function showMemoryModal() {
+                openModal(memoryModal);
+                renderMemoryList();
+            }
+
+            function renderMemoryList() {
+                const bank = getMemoryBank();
+                if (!bank.length) {
+                    memoryContent.style.display = 'flex';
+                    memoryContent.style.justifyContent = 'center';
+                    memoryContent.style.alignItems = 'center';
+                    memoryContent.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Add verses to your memory bank.</p>';
+                    return;
+                }
+                memoryContent.style.display = 'grid';
+                memoryContent.replaceChildren();
+                bank.forEach(item => {
+                    const wordCount = item.text.split(' ').length;
+                    const done = item.hidden.length;
+                    const div = document.createElement('div');
+                    div.className = 'memory-bubble' + (done >= wordCount ? ' complete' : done > 0 ? ' partial' : '');
+                    div.innerHTML = `<div class="memory-ref">${escapeHTML(item.ref)}</div><div class="memory-count">${done}/${wordCount}</div>`;
+                    const delBtn = document.createElement('button');
+                    delBtn.type = 'button';
+                    delBtn.className = 'delete-btn';
+                    delBtn.textContent = 'X';
+                    delBtn.setAttribute('aria-label', `Remove ${item.ref}`);
+                    delBtn.addEventListener('click', e => {
+                        e.stopPropagation();
+                        pendingMemoryDelete = item.ref;
+                        deleteMemoryName.textContent = item.ref;
+                        openModal(memoryDeleteModal);
+                    });
+                    div.appendChild(delBtn);
+                    makeClickable(div, e => {
+                        if (e.target === delBtn) return;
+                        closeModal(memoryModal);
+                        startMemory(item);
+                    });
+                    memoryContent.appendChild(div);
+                });
+            }
+
+            $('add-memory').addEventListener('click', () => showRefSelector(false, renderMemoryList));
+            $('close-memory').addEventListener('click', () => closeModal(memoryModal));
+            $('confirm-delete-memory').addEventListener('click', () => {
+                saveMemoryBank(getMemoryBank().filter(i => i.ref !== pendingMemoryDelete));
+                pendingMemoryDelete = null;
+                closeModal(memoryDeleteModal);
+                renderMemoryList();
+            });
+            $('cancel-delete-memory').addEventListener('click', () => closeModal(memoryDeleteModal));
+
+            function addToMemoryBank(ref, text) {
+                const bank = getMemoryBank();
+                if (bank.some(i => i.ref === ref)) return false;
+                bank.push({ ref, text, hidden: [] });
+                saveMemoryBank(bank);
+                return true;
+            }
+
+            /* =====================================================================
+               VERSE / CHAPTER SELECTOR
+               ===================================================================== */
+            function showRefSelector(isForChoice, callback) {
+                currentIsChoice = isForChoice;
+                currentSelectorCallback = callback;
+                openModal(refSelectorModal);
+                showBooksSelector();
+            }
+
+            $('close-selector').addEventListener('click', () => closeModal(refSelectorModal));
+            selectorBack.addEventListener('click', () => {
+                if (selectorCurrentView === 'chapter-text') showChaptersSelector(selectorCurrentBook);
+                else if (selectorCurrentView === 'chapters') showBooksSelector();
+            });
+
+            function showBooksSelector() {
+                selectorCurrentView = 'books';
+                selectorTitle.textContent = currentIsChoice ? 'Select Verse or Chapter' : 'Select Verse to Memorize';
+                selectorBack.style.display = 'none';
+                renderBooksGrid(selectorContent, showChaptersSelector);
+            }
+
+            function showChaptersSelector(book) {
+                selectorCurrentView = 'chapters';
+                selectorCurrentBook = book;
+                selectorTitle.textContent = book;
+                selectorBack.style.display = 'block';
+                renderChaptersGrid(selectorContent, book, ch => showChapterSelector(book, ch));
+            }
+
+            async function showChapterSelector(book, chapter) {
+                selectorCurrentView = 'chapter-text';
+                selectorTitle.textContent = `${book} ${chapter}`;
+                selectorContent.innerHTML = '<div class="loading">Loading verses...</div>';
+                try {
+                    const data = await getChapter(book, chapter);
+                    renderChapterText(selectorContent, book, chapter, data, true);
+                } catch {
+                    selectorContent.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Failed to load chapter.</p>';
+                }
+            }
+
+            function renderChapterText(container, book, chapter, data, isSelector) {
+                const completedSet = new Set(getProgress().completed);
+                const verses = data.verses.map(v => ({
+                    num: v.verse,
+                    ref: `${book} ${chapter}:${v.verse}`,
+                    text: cleanText(v.text)
+                }));
+                container.innerHTML = `
+                    <div class="chapter-options"><button type="button" class="type-entire-chapter">Type Entire Chapter</button></div>
+                    <div class="chapter-text">${verses.map((v, i) => `
+                        <div class="verse ${completedSet.has(v.ref) ? 'completed' : ''}">
+                            <button type="button" class="verse-btn add-btn" data-index="${i}" aria-label="Add ${v.ref} to Memory Bank" title="Add to Memory Bank">
+                                <i data-lucide="brain"></i>
+                            </button>
+                            <span class="verse-number">${v.num}</span>
+                            <span class="verse-text">${escapeHTML(v.text)}</span>
+                            <button type="button" class="verse-btn type-btn" data-index="${i}" aria-label="Type ${v.ref}" title="Type this verse">
+                                <i data-lucide="keyboard"></i>
+                            </button>
+                        </div>`).join('')}
+                    </div>`;
+                refreshIcons();
+
+                container.querySelectorAll('.add-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const v = verses[+btn.dataset.index];
+                        if (!addToMemoryBank(v.ref, v.text)) {
+                            showCustomAlert('Already in Memory Bank');
+                            return;
+                        }
+                        showCustomAlert('Added to Memory Bank');
+                        if (isSelector && !currentIsChoice) {
+                            closeModal(refSelectorModal);
+                            currentSelectorCallback?.(v.ref);
+                        }
+                    });
+                });
+
+                container.querySelectorAll('.type-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const v = verses[+btn.dataset.index];
+                        if (isSelector && !currentIsChoice) {
+                            // From the Memory Bank "Add" flow: add (if needed) and start memorising right away
+                            addToMemoryBank(v.ref, v.text);
+                            closeModal(refSelectorModal);
+                            closeModal(memoryModal);
+                            startMemory(getMemoryBank().find(i => i.ref === v.ref));
+                        } else if (isSelector) {
+                            closeModal(refSelectorModal);
+                            currentSelectorCallback?.(v.ref);
+                        } else {
+                            closeModal(modal);
+                            startSingleVerse(v.ref);
+                        }
+                    });
+                });
+
+                container.querySelector('.type-entire-chapter').addEventListener('click', () => {
+                    closeModal(refSelectorModal);
+                    closeModal(modal);
+                    closeModal(memoryModal);
+                    startChapter(book, chapter, data.total || data.verses.length);
+                });
+            }
+
+            /* =====================================================================
+               TYPED CONFIRMATION ("Yes, I am sure.")
+               ===================================================================== */
+            function setupConfirmPhrase(input, ghost, button) {
+                input.addEventListener('input', () => {
+                    const value = input.value.toLowerCase();
+                    const phrase = CONFIRM_PHRASE.toLowerCase();
+                    ghost.querySelectorAll('span').forEach((span, i) => {
+                        span.classList.toggle('correct', i < value.length && value[i] === phrase[i]);
+                    });
+                    const ok = value === phrase;
+                    button.disabled = !ok;
+                    button.classList.toggle('enabled', ok);
+                });
+                return function reset() {
+                    input.value = '';
+                    button.disabled = true;
+                    button.classList.remove('enabled');
+                    ghost.innerHTML = [...CONFIRM_PHRASE].map(ch => `<span class="phrase-span">${ch === ' ' ? '\u00A0' : escapeHTML(ch)}</span>`).join('');
+                    setTimeout(() => input.focus(), 0);
+                };
+            }
+            const resetClearConfirm = setupConfirmPhrase($('confirm-input'), $('confirm-ghost'), $('confirm-clear'));
+            const resetDeleteConfirm = setupConfirmPhrase($('delete-input'), $('delete-ghost'), $('confirm-delete'));
+
+            /* =====================================================================
+               EXPORT / CLEAR
+               ===================================================================== */
+            $('export-progress').addEventListener('click', () => {
+                const blob = new Blob([JSON.stringify(getProgress(), null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `scripture-flow-${currentProfile ? currentProfile + '-' : ''}${localDateStr()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);   // revoking immediately can cancel the download in some browsers
+            });
+
+            $('clear-progress').addEventListener('click', () => {
+                closeModal(modal);
+                openModal(confirmModal);
+                resetClearConfirm();
+            });
+            $('cancel-clear').addEventListener('click', () => {
+                closeModal(confirmModal);
+                openModal(modal);
+            });
+            $('confirm-clear').addEventListener('click', e => {
+                if (e.currentTarget.disabled) return;
+                localStorage.removeItem(STORAGE_KEY);
+                closeModal(confirmModal);
+                showOverview();
+                openModal(modal);                       // previously rendered the overview into a hidden modal
+            });
+
+            /* =====================================================================
+               PROFILES
+               ===================================================================== */
+            function getProfiles() {
+                try { return JSON.parse(localStorage.getItem(PROFILES_KEY)) || []; } catch { return []; }
+            }
+
+            function initProfiles() {
+                const profiles = getProfiles();
+                currentProfile = localStorage.getItem(CURRENT_PROFILE_KEY) || '';
+                if (!profiles.length) {
+                    currentProfile = '';
+                } else if (!profiles.includes(currentProfile)) {
+                    currentProfile = profiles[0];
+                    safeSetItem(CURRENT_PROFILE_KEY, currentProfile);
+                }
+                STORAGE_KEY = currentProfile ? 'kjv-typing-progress-v6-' + currentProfile : 'kjv-typing-progress-v6';
+                MEMORY_KEY = currentProfile ? 'scripture-flow-memory-bank-' + currentProfile : 'scripture-flow-memory-bank';
+
+                const profileControl = $('profile-control');
+                const profileName = $('profile-name');
+                if (!profiles.length) {
+                    profileName.textContent = '+';
+                    profileControl.setAttribute('aria-label', 'Create profile');
+                    profileControl.addEventListener('click', createNewProfile);
+                    createNewProfile();
                 } else {
-                    confirmCreate.disabled = true;
-                    confirmCreate.classList.remove('enabled');
+                    profileName.textContent = currentProfile;
+                    profileControl.setAttribute('aria-label', `Profile: ${currentProfile}. Switch profile`);
+                    profileControl.addEventListener('click', e => {
+                        e.stopPropagation();
+                        toggleProfileList(profiles, currentProfile);
+                    });
                 }
-            };
-            newProfileInput.addEventListener('input', inputListener);
-            const enterListener = (e) => {
-                if (e.key === 'Enter' && !confirmCreate.disabled) {
-                    confirmClick();
-                }
-            };
-            newProfileInput.addEventListener('keydown', enterListener);
-            const confirmClick = () => {
-                if (!confirmCreate.disabled) {
+            }
+
+            // Handlers are assigned with on* properties so re-opening the dialog can't stack duplicate listeners
+            // (the old version leaked a click listener every time "Name already exists" was shown).
+            function createNewProfile() {
+                openModal(createModal);
+                newProfileInput.value = '';
+                confirmCreate.disabled = true;
+                confirmCreate.classList.remove('enabled');
+                setTimeout(() => newProfileInput.focus(), 0);
+
+                newProfileInput.oninput = () => {
+                    const ok = newProfileInput.value.trim().length > 0;
+                    confirmCreate.disabled = !ok;
+                    confirmCreate.classList.toggle('enabled', ok);
+                };
+                newProfileInput.onkeydown = e => {
+                    if (e.key === 'Enter') { e.preventDefault(); confirmCreate.onclick(); }
+                };
+                confirmCreate.onclick = () => {
+                    if (confirmCreate.disabled) return;
                     const name = newProfileInput.value.trim();
-                    let profiles = JSON.parse(localStorage.getItem('scripture-flow-profiles')) || [];
+                    const profiles = getProfiles();
                     if (profiles.includes(name)) {
                         showCustomAlert('Name already exists');
                         return;
                     }
                     profiles.push(name);
-                    localStorage.setItem('scripture-flow-profiles', JSON.stringify(profiles));
-                    localStorage.setItem('scripture-flow-current-profile', name);
-                    createModal.style.display = 'none';
-                    location.reload();
-                }
-            };
-            confirmCreate.addEventListener('click', confirmClick);
-            const cancelClick = () => {
-                createModal.style.display = 'none';
-                newProfileInput.removeEventListener('input', inputListener);
-                newProfileInput.removeEventListener('keydown', enterListener);
-                confirmCreate.removeEventListener('click', confirmClick);
-                cancelCreate.removeEventListener('click', cancelClick);
-            };
-            cancelCreate.addEventListener('click', cancelClick);
-        }
-        function showProfileList(profiles, current) {
-            let listDiv = $('profile-list');
-            if (listDiv) listDiv.remove();
-            listDiv = document.createElement('div');
-            listDiv.id = 'profile-list';
-            document.body.appendChild(listDiv);
-            const grid = document.createElement('div');
-            grid.style.cssText = `
-                display: grid;
-                grid-template-columns: 1fr auto;
-                gap: 0.5rem 1rem;
-                width: 100%;
-                padding: 0.6rem;
-            `;
-            listDiv.appendChild(grid);
-            profiles.forEach(name => {
-                const btn = document.createElement('button');
-                btn.textContent = name;
-                btn.classList.toggle('current', name === current);
-                btn.style.cssText = `
-                    width: 100%;
-                    text-align: left;
-                    background: transparent;
-                    border: none;
-                    color: ${name === current ? 'var(--text)' : 'var(--text-muted)'};
-                    cursor: pointer;
-                    padding: 0.5rem;
-                    border-radius: 0.5rem;
-                    transition: background 0.2s, box-shadow 0.2s;
-                `;
-                btn.onmouseenter = () => {
-                    btn.style.background = 'var(--glass)';
-                    btn.style.boxShadow = '0 0 10px var(--accent)';
-                };
-                btn.onmouseleave = () => {
-                    btn.style.background = 'transparent';
-                    btn.style.boxShadow = 'none';
-                };
-                btn.onclick = () => {
-                    localStorage.setItem('scripture-flow-current-profile', name);
+                    safeSetItem(PROFILES_KEY, JSON.stringify(profiles));
+                    safeSetItem(CURRENT_PROFILE_KEY, name);
                     location.reload();
                 };
-                const spacer = document.createElement('div');
-                grid.appendChild(btn);
-                grid.appendChild(spacer);
-            });
-            const actionCol = document.createElement('div');
-            actionCol.style.cssText = `
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-                margin-left: auto;
-                padding-left: 1rem;
-            `;
-            const addBtn = document.createElement('button');
-            addBtn.textContent = '+';
-            addBtn.style.cssText = `
-                color: var(--text);
-                background: transparent;
-                border: none;
-                font-size: 1rem;
-                font-weight: 600;
-                cursor: pointer;
-                padding: 0.4rem 0.6rem;
-                opacity: 0.7;
-                transition: opacity 0.2s;
-            `;
-            addBtn.onmouseenter = () => addBtn.style.opacity = '1';
-            addBtn.onmouseleave = () => addBtn.style.opacity = '0.7';
-            addBtn.onclick = e => {
-                e.stopPropagation();
-                listDiv.remove();
-                createNewProfile();
-            };
-            const delBtn = document.createElement('button');
-            delBtn.textContent = '−';
-            delBtn.style.cssText = `
-                color: var(--incorrect);
-                background: transparent;
-                border: none;
-                font-size: 1rem;
-                font-weight: 600;
-                cursor: pointer;
-                padding: 0.4rem 0.6rem;
-                opacity: 0.7;
-                transition: opacity 0.2s;
-            `;
-            delBtn.onmouseenter = () => delBtn.style.opacity = '1';
-            delBtn.onmouseleave = () => delBtn.style.opacity = '0.7';
-            delBtn.onclick = e => {
-                e.stopPropagation();
-                listDiv.remove();
-                showConfirmDelete(current);
-            };
-            actionCol.appendChild(addBtn);
-            actionCol.appendChild(delBtn);
-            listDiv.appendChild(actionCol);
-            const removeList = e => {
-                if (!listDiv.contains(e.target) && !$('profile-control').contains(e.target)) {
-                    listDiv.remove();
-                    document.removeEventListener('click', removeList);
-                }
-            };
-            document.addEventListener('click', removeList);
-        }
-        function showConfirmDelete(name) {
-            deleteProfileName.textContent = name;
-            deleteModal.style.display = 'flex';
-            deleteInput.value = '';
-            confirmDelete.disabled = true;
-            confirmDelete.classList.remove('enabled');
-            renderDeletePhrase();
-            setTimeout(() => deleteInput.focus(), 0);
-        }
-        function renderDeletePhrase() {
-            const phrase = 'Yes, I am sure.';
-            deleteGhost.innerHTML = phrase.split('').map(char => `<span class="phrase-span">${char === ' ' ? '\u00A0' : char}</span>`).join('');
-        }
-        deleteInput.addEventListener('input', () => {
-            const value = deleteInput.value.toLowerCase();
-            const phrase = 'yes, i am sure.'.toLowerCase();
-            const spans = deleteGhost.querySelectorAll('span');
-            for (let i = 0; i < phrase.length; i++) {
-                if (i < value.length && value[i] === phrase[i]) {
-                    spans[i].classList.add('correct');
-                } else {
-                    spans[i].classList.remove('correct');
-                }
+                $('cancel-create').onclick = () => closeModal(createModal);
             }
-            if (value === phrase) {
-                confirmDelete.disabled = false;
-                confirmDelete.classList.add('enabled');
-            } else {
-                confirmDelete.disabled = true;
-                confirmDelete.classList.remove('enabled');
+
+            function closeProfileList() {
+                $('profile-list')?.remove();
+                document.removeEventListener('click', onOutsideProfileClick);
             }
-        });
-        confirmDelete.onclick = () => {
-            if (!confirmDelete.disabled) {
-                const name = deleteProfileName.textContent;
-                let profiles = JSON.parse(localStorage.getItem('scripture-flow-profiles')) || [];
-                profiles = profiles.filter(p => p !== name);
-                localStorage.setItem('scripture-flow-profiles', JSON.stringify(profiles));
+            function onOutsideProfileClick(e) {
+                if (!e.target.closest('#profile-list, #profile-control')) closeProfileList();
+            }
+
+            function toggleProfileList(profiles, current) {
+                if ($('profile-list')) { closeProfileList(); return; }
+                const listDiv = document.createElement('div');
+                listDiv.id = 'profile-list';
+                listDiv.style.cssText = 'display:flex; gap:1rem;';
+
+                const names = document.createElement('div');
+                names.style.cssText = 'display:flex; flex-direction:column; gap:0.25rem; min-width:8rem;';
+                profiles.forEach(name => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.textContent = name;
+                    btn.classList.toggle('current', name === current);
+                    btn.style.borderRadius = '0.5rem';
+                    btn.addEventListener('click', () => {
+                        safeSetItem(CURRENT_PROFILE_KEY, name);
+                        location.reload();
+                    });
+                    names.appendChild(btn);
+                });
+
+                const actions = document.createElement('div');
+                actions.style.cssText = 'display:flex; flex-direction:column; gap:0.25rem;';
+                const addBtn = document.createElement('button');
+                addBtn.type = 'button';
+                addBtn.className = 'add-btn';
+                addBtn.textContent = '+';
+                addBtn.setAttribute('aria-label', 'Add profile');
+                addBtn.addEventListener('click', e => { e.stopPropagation(); closeProfileList(); createNewProfile(); });
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.textContent = '−';
+                delBtn.style.color = 'var(--incorrect)';
+                delBtn.setAttribute('aria-label', `Delete profile ${current}`);
+                delBtn.addEventListener('click', e => { e.stopPropagation(); closeProfileList(); showConfirmDelete(current); });
+                actions.append(addBtn, delBtn);
+
+                listDiv.append(names, actions);
+                document.body.appendChild(listDiv);
+                setTimeout(() => document.addEventListener('click', onOutsideProfileClick), 0);
+            }
+
+            function showConfirmDelete(name) {
+                $('delete-profile-name').textContent = name;
+                openModal(deleteModal);
+                resetDeleteConfirm();
+            }
+
+            $('confirm-delete').addEventListener('click', e => {
+                if (e.currentTarget.disabled) return;
+                const name = $('delete-profile-name').textContent;
+                const profiles = getProfiles().filter(p => p !== name);
+                safeSetItem(PROFILES_KEY, JSON.stringify(profiles));
                 localStorage.removeItem('kjv-typing-progress-v6-' + name);
                 localStorage.removeItem('scripture-flow-memory-bank-' + name);
-                if (currentProfile === name) {
-                    currentProfile = profiles.length ? profiles[0] : '';
-                    localStorage.setItem('scripture-flow-current-profile', currentProfile);
-                }
-                deleteModal.style.display = 'none';
+                if (currentProfile === name) safeSetItem(CURRENT_PROFILE_KEY, profiles[0] || '');
                 location.reload();
+            });
+            $('cancel-delete').addEventListener('click', () => closeModal(deleteModal));
+
+            /* =====================================================================
+               CUSTOM ALERT
+               ===================================================================== */
+            let alertKeyHandler = null;
+            function showCustomAlert(message) {
+                customAlertMessage.textContent = message;
+                openModal(customAlertModal);
+                customAlertOk.focus();
+                const close = () => {
+                    closeModal(customAlertModal);
+                    document.removeEventListener('keydown', alertKeyHandler);
+                    alertKeyHandler = null;
+                    if (memoryModal.style.display === 'flex') renderMemoryList();
+                };
+                if (alertKeyHandler) document.removeEventListener('keydown', alertKeyHandler);
+                alertKeyHandler = e => { if (e.key === 'Enter') { e.preventDefault(); close(); } };
+                // Register on the next tick: otherwise the same Enter keypress that triggered the alert
+                // (e.g. in the profile-name box) bubbles up and closes it instantly.
+                setTimeout(() => { if (alertKeyHandler) document.addEventListener('keydown', alertKeyHandler); }, 0);
+                customAlertOk.onclick = close;
             }
-        };
-        cancelDelete.onclick = () => {
-            deleteModal.style.display = 'none';
-        };
-        /* Custom Alert Functions */
-        function showCustomAlert(message) {
-            customAlertMessage.textContent = message;
-            customAlertModal.style.display = 'flex';
-            customAlertOk.focus();
-            const handleEnter = (e) => {
-                if (e.key === 'Enter') {
-                    customAlertModal.style.display = 'none';
-                    renderMemoryList();
-                    document.removeEventListener('keydown', handleEnter);
-                }
-            };
-            document.addEventListener('keydown', handleEnter);
-            customAlertOk.onclick = () => {
-                customAlertModal.style.display = 'none';
-                renderMemoryList();
-                document.removeEventListener('keydown', handleEnter);
-            };
-        }
-        initProfiles();
-        document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-        });
-        /* About Modal Handling */
-        const aboutControl = document.createElement('div');
-        aboutControl.id = 'about-control';
-        aboutControl.style = `
-            position: fixed;
-            top: 1.2rem;
-            right: 1.2rem;
-            font-size: 0.88rem;
-            color: var(--text-muted);
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 1.5rem;
-            padding: 0.5rem 1rem;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-            z-index: 1001;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s ease;
-            opacity: 0.7;
-            cursor: pointer;
-        `;
-        aboutControl.innerHTML = '<span>About</span>';
-        aboutControl.onmouseover = () => { aboutControl.style.opacity = '1'; aboutControl.style.boxShadow = '0 6px 20px rgba(96,165,250,0.4)'; };
-        aboutControl.onmouseout = () => { aboutControl.style.opacity = '0.7'; aboutControl.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)'; };
-        aboutControl.onclick = () => {
-            aboutModal.style.display = 'flex';
-            lucide.createIcons();
-        };
-        document.body.appendChild(aboutControl);
-        closeAbout.onclick = () => {
-            aboutModal.style.display = 'none';
-        };
+
+            /* =====================================================================
+               BACKGROUND PARTICLES
+               ===================================================================== */
+            function initParticles() {
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                const canvas = $('particles');
+                const ctx = canvas.getContext('2d');
+                const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+                resize();
+                window.addEventListener('resize', resize);
+                const particles = Array.from({ length: 50 }, () => ({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 2 + 1,
+                    vx: Math.random() * 0.5 - 0.25,
+                    vy: Math.random() * 0.5 - 0.25
+                }));
+                (function animate() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    for (const p of particles) {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        if (p.x < 0 || p.x > canvas.width) p.vx = -p.vx;
+                        if (p.y < 0 || p.y > canvas.height) p.vy = -p.vy;
+                    }
+                    requestAnimationFrame(animate);
+                })();
+            }
+
+            /* =====================================================================
+               INIT
+               ===================================================================== */
+            initProfiles();
+            initParticles();
+            // Lucide/Tone are loaded with "defer", so they're ready by DOMContentLoaded.
+            document.addEventListener('DOMContentLoaded', refreshIcons);
+        })();
     </script>
 </body>
 </html>
