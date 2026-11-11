@@ -1053,9 +1053,8 @@
     <button type="button" id="profile-control" class="glass-pill"><span id="profile-name"></span></button>
     <button type="button" id="about-control" class="glass-pill">About</button>
     <!-- Audio Elements -->
-    <!-- Ambient stream. The source is assigned in JS (see AMBIENT_STREAMS) so it can fail over between servers.
-         No crossorigin attribute: SomaFM doesn't guarantee CORS headers, and with crossorigin="anonymous"
-         the browser refuses to play the stream at all if they're missing. -->
+    <!-- Background music. Tracks are listed in MUSIC_TRACKS (JS) and played back-to-back on a loop.
+         preload="none" so nothing downloads until a typing mode is actually started. -->
     <audio id="ambient-audio" preload="none"></audio>
     <!-- Progress Modal -->
     <div id="progress-modal" class="modal" role="dialog" aria-modal="true">
@@ -1226,7 +1225,7 @@
                     </li>
                     <li style="display: flex; gap: 0.7rem;">
                         <span style="color: var(--accent); font-weight: 600; min-width: 160px;">Volume Control:</span>
-                        <span>Adjust ambient music volume. Music: Deep Space One by SomaFM (listener-supported radio).</span>
+                        <span>Adjust background music volume.</span>
                     </li>
                     <li style="display: flex; gap: 0.7rem;">
                         <span style="color: var(--accent); font-weight: 600; min-width: 160px;">Export/Clear:</span>
@@ -1263,13 +1262,11 @@
                ===================================================================== */
             const $ = id => document.getElementById(id);
             const API = 'https://bible-api.com/';
-            // SomaFM rotates its direct "iceN" servers. ice1 is no longer in their published playlist,
-            // which is why the music stopped. These come from https://somafm.com/deepspaceone.pls.
-            // If they ever change again, open that .pls file in a browser and copy the new URLs here.
-            const AMBIENT_STREAMS = [
-                'https://ice6.somafm.com/deepspaceone-128-mp3',
-                'https://ice2.somafm.com/deepspaceone-128-mp3',
-                'https://ice5.somafm.com/deepspaceone-128-mp3'
+            // Local background tracks (relative to index.html). They play in order and loop forever:
+            // background_1 -> background_2 -> background_1 -> ...
+            const MUSIC_TRACKS = [
+                'audio/background_1.mp3',
+                'audio/background_2.mp3'
             ];
             const ADVANCE_DELAY = 1800;          // ms between a completed verse and the next one
             const MAX_RANDOM_TRIES = 6;          // bible-api.com allows ~15 requests / 30 s per IP
@@ -1598,9 +1595,10 @@
             /* =====================================================================
                AMBIENT MUSIC
                ===================================================================== */
-            let streamIndex = 0;
+            let trackIndex = 0;
             let musicStarted = false;
             let musicFailed = false;
+            let failedInARow = 0;              // consecutive tracks that failed to load
             let fadeTimer = null;
 
             const targetVolume = () => parseFloat(volumeSlider.value);
@@ -1622,13 +1620,18 @@
                 }, 40);
             }
 
+            function loadTrack(index) {
+                trackIndex = index % MUSIC_TRACKS.length;
+                ambient.src = MUSIC_TRACKS[trackIndex];
+            }
+
             function playAmbient() {
                 ambient.volume = 0;
                 ambient.play()
                     .then(() => { setMusicStatus(''); fadeIn(); })
                     .catch(err => {
                         // Autoplay blocked: allow the next user click to try again.
-                        // (Network/format errors are handled by the 'error' listener below.)
+                        // (Missing/corrupt files are handled by the 'error' listener below.)
                         if (err.name === 'NotAllowedError') musicStarted = false;
                     });
             }
@@ -1636,35 +1639,36 @@
             function startMusic() {
                 if (musicStarted || musicFailed) return;
                 musicStarted = true;
-                if (!ambient.getAttribute('src')) ambient.src = AMBIENT_STREAMS[streamIndex];
+                if (!ambient.getAttribute('src')) loadTrack(0);
                 playAmbient();
             }
 
-            function tryNextStream() {
-                streamIndex++;
-                if (streamIndex < AMBIENT_STREAMS.length) {
-                    ambient.src = AMBIENT_STREAMS[streamIndex];
-                    playAmbient();
-                } else {
+            // When a track finishes, move on to the next one (wrapping back to the first).
+            ambient.addEventListener('ended', () => {
+                if (!musicStarted) return;
+                loadTrack(trackIndex + 1);
+                playAmbient();
+            });
+
+            ambient.addEventListener('playing', () => { failedInARow = 0; });
+
+            // If a file is missing or unreadable, skip to the other track. Give up only if every track fails.
+            ambient.addEventListener('error', () => {
+                console.warn('Could not load background track:', MUSIC_TRACKS[trackIndex]);
+                failedInARow++;
+                if (failedInARow >= MUSIC_TRACKS.length) {
                     musicFailed = true;
                     musicStarted = false;
                     setMusicStatus('Music unavailable');
-                    console.warn('All ambient streams failed. Check', AMBIENT_STREAMS);
+                    return;
                 }
-            }
-
-            ambient.addEventListener('error', tryNextStream);
-            // Live streams can drop; reconnect on the same server list.
-            ambient.addEventListener('ended', () => {
-                if (!musicStarted) return;
-                streamIndex = (streamIndex + 1) % AMBIENT_STREAMS.length;
-                ambient.src = AMBIENT_STREAMS[streamIndex];
-                playAmbient();
+                loadTrack(trackIndex + 1);
+                if (musicStarted) playAmbient();
             });
 
             function pauseMusic() {
                 clearInterval(fadeTimer);
-                ambient.pause();                       // pause (not volume 0) so the stream stops downloading
+                ambient.pause();                       // resumes from the same spot when the user returns
             }
             function resumeMusic() {
                 if (musicStarted && ambient.paused) playAmbient();
