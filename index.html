@@ -1053,7 +1053,7 @@
     <button type="button" id="profile-control" class="glass-pill"><span id="profile-name"></span></button>
     <button type="button" id="about-control" class="glass-pill">About</button>
     <!-- Audio Elements -->
-    <!-- Background music. Tracks are listed in MUSIC_TRACKS (JS) and played back-to-back on a loop.
+    <!-- Background music. Files are listed in MUSIC_TRACKS (JS) and loop forever.
          preload="none" so nothing downloads until a typing mode is actually started. -->
     <audio id="ambient-audio" preload="none"></audio>
     <!-- Progress Modal -->
@@ -1262,11 +1262,10 @@
                ===================================================================== */
             const $ = id => document.getElementById(id);
             const API = 'https://bible-api.com/';
-            // Local background tracks (relative to index.html). They play in order and loop forever:
-            // background_1 -> background_2 -> background_1 -> ...
+            // Local background music (relative to index.html). Tracks play in order and loop forever.
+            // Currently one combined file exported from Clipchamp; add more paths here if needed.
             const MUSIC_TRACKS = [
-                'audio/background_1.mp3',
-                'audio/background_2.mp3'
+                'audio/music.mp4'
             ];
             const ADVANCE_DELAY = 1800;          // ms between a completed verse and the next one
             const MAX_RANDOM_TRIES = 6;          // bible-api.com allows ~15 requests / 30 s per IP
@@ -1623,6 +1622,7 @@
             function loadTrack(index) {
                 trackIndex = index % MUSIC_TRACKS.length;
                 ambient.src = MUSIC_TRACKS[trackIndex];
+                ambient.loop = MUSIC_TRACKS.length === 1;   // single file: let the browser loop it seamlessly
             }
 
             function playAmbient() {
@@ -1643,7 +1643,7 @@
                 playAmbient();
             }
 
-            // When a track finishes, move on to the next one (wrapping back to the first).
+            // With multiple tracks, move on to the next one when a track finishes (wrapping around).
             ambient.addEventListener('ended', () => {
                 if (!musicStarted) return;
                 loadTrack(trackIndex + 1);
@@ -1652,7 +1652,7 @@
 
             ambient.addEventListener('playing', () => { failedInARow = 0; });
 
-            // If a file is missing or unreadable, skip to the other track. Give up only if every track fails.
+            // If a file is missing or unreadable, try the next one. Give up only if every track fails.
             ambient.addEventListener('error', () => {
                 console.warn('Could not load background track:', MUSIC_TRACKS[trackIndex]);
                 failedInARow++;
