@@ -19,7 +19,13 @@
   }
   /* ?embed=1 → fills an iframe with a transparent page background */
   body.embed { background: transparent; padding: 0; }
-  body.embed #app { width: 100vw; height: 100vh; max-height: none; aspect-ratio: auto; border-radius: 0; border: none; }
+  html:has(body.embed), body.embed { overflow: hidden; height: 100%; }
+  body.embed #app { width: 100%; height: 100%; max-height: none; aspect-ratio: auto; border-radius: 0; border: none; }
+  /* dark, thin scroll bars (only appear if a very small window truly needs them) */
+  * { scrollbar-width: thin; scrollbar-color: #4a5160 transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #4a5160; border-radius: 8px; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
 
   #app {
     width: min(1000px, 100%); aspect-ratio: 4 / 3; max-height: calc(100vh - 48px);
@@ -91,7 +97,46 @@
   .ov-btns button[hidden] { display: none; }
   #overlay .small { font-size: 12px; color: var(--muted); }
 
-  @media (max-width: 720px) {
+  /* Shorter windows (e.g. inside the main site): tighten the menu so everything fits without scrolling */
+  @media (max-height: 760px) {
+    header { padding: 12px 16px 2px; }
+    header h1 { font-size: clamp(24px, 3.4vw, 32px); }
+    header p { font-size: 13px; margin-top: 2px; }
+    #banner { height: 64px; }
+    nav { padding: 8px; gap: 4px; }
+    .lesson-btn { padding: 5px 9px; font-size: 14px; gap: 0; }
+    .lesson-btn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lesson-btn small { font-size: 11px; }
+    nav { gap: 2px; }
+    #detail { padding: 12px 18px; gap: 10px; }
+    #detail h2 { font-size: 20px; }
+    .key { min-width: 30px; height: 30px; }
+    .module { padding: 10px 12px; gap: 4px; }
+    .module p { font-size: 12px; line-height: 1.35; }
+    footer { padding: 7px 16px; }
+    .pill { padding: 6px 14px; }
+  }
+  @media (max-height: 560px) {
+    header { padding: 8px 16px 0; }
+    header p { font-size: 12px; }
+    #banner { height: 50px; }
+    .lesson-btn { padding: 4px 9px; }
+    .lesson-btn span { white-space: normal; line-height: 1.2; }
+  }
+  @media (max-height: 470px) {
+    #banner { display: none; }
+    header p { display: none; }
+    .lesson-btn { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 6px; }
+    .lesson-btn span { white-space: nowrap; }
+    .lesson-btn small { flex-shrink: 0; }
+    .module p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  }
+  /* Medium widths: keep the side list, just narrower */
+  @media (max-width: 900px) {
+    main { grid-template-columns: 170px 1fr; }
+    .lesson-btn { font-size: 14px; }
+  }
+  @media (max-width: 560px) {
     #app { aspect-ratio: auto; height: calc(100vh - 48px); }
     main { grid-template-columns: 1fr; }
     nav { flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--line); }
@@ -252,11 +297,29 @@ function drawFloats(list) {
   for (const f of list) { const k = 1 - f.life / f.max; text(f.str, f.x, f.y, f.size, Math.min(1, k * 1.6)); }
 }
 
+/* ---------- profile-scoped storage ----------
+   Uses the same profile that is selected on the main Scripture Flow page (same site = same localStorage),
+   so each child keeps their own tutorial progress and sound setting. */
+const PROFILE = (() => {
+  try {
+    const list = JSON.parse(localStorage.getItem('scripture-flow-profiles')) || [];
+    const cur = localStorage.getItem('scripture-flow-current-profile') || '';
+    return list.includes(cur) ? cur : (list[0] || '');
+  } catch { return ''; }
+})();
+const pkey = base => PROFILE ? `${base}-${PROFILE}` : base;
+// One-time move: progress saved before profiles were supported goes to the first profile that opens the tutorial.
+try {
+  if (PROFILE && localStorage.getItem('btt-progress-v2') !== null && localStorage.getItem(pkey('btt-progress-v2')) === null) {
+    localStorage.setItem(pkey('btt-progress-v2'), localStorage.getItem('btt-progress-v2'));
+    localStorage.removeItem('btt-progress-v2');
+  }
+} catch {}
 /* ---------- sound (Web Audio, no files needed) ---------- */
 const Sound = {
   ac: null, master: null,
-  on: (() => { try { return localStorage.getItem('btt-sound') !== 'off'; } catch { return true; } })(),
-  set(on) { this.on = on; try { localStorage.setItem('btt-sound', on ? 'on' : 'off'); } catch {} },
+  on: (() => { try { return localStorage.getItem(pkey('btt-sound')) !== 'off'; } catch { return true; } })(),
+  set(on) { this.on = on; try { localStorage.setItem(pkey('btt-sound'), on ? 'on' : 'off'); } catch {} },
   ensure() {
     if (!this.on) return null;
     if (!this.ac) {
@@ -371,9 +434,9 @@ function drawHands(act, ch, top, h, W, press, miss, alpha) {
 
 /* ---------- progress ---------- */
 const Progress = {
-  data: (() => { try { return JSON.parse(localStorage.getItem('btt-progress-v2')) || {}; } catch { return {}; } })(),
+  data: (() => { try { return JSON.parse(localStorage.getItem(pkey('btt-progress-v2'))) || {}; } catch { return {}; } })(),
   get(id) { return this.data[id] || {}; },
-  save() { try { localStorage.setItem('btt-progress-v2', JSON.stringify(this.data)); } catch {} },
+  save() { try { localStorage.setItem(pkey('btt-progress-v2'), JSON.stringify(this.data)); } catch {} },
   record(id, res) {
     const p = this.data[id] || {};
     let isBest = false;
@@ -2423,11 +2486,15 @@ $('btn-reset').addEventListener('click', () => { if (confirm('Reset all progress
 /* ---------- menu banner ---------- */
 const Banner = {
   cv: $('banner'), c: $('banner').getContext('2d'),
-  size() { const dpr = Math.min(devicePixelRatio || 1, 2); this.cv.width = this.cv.clientWidth * dpr; this.cv.height = this.cv.clientHeight * dpr; this.c.setTransform(dpr, 0, 0, dpr, 0, 0); },
+  size() { const dpr = Math.min(devicePixelRatio || 1, 2); this.cv.width = Math.round(this.cv.clientWidth * dpr); this.cv.height = Math.round(this.cv.clientHeight * dpr); this.c.setTransform(dpr, 0, 0, dpr, 0, 0); },
   draw(t) {
-    const c = this.c, W = this.cv.clientWidth, H = this.cv.clientHeight, g = H - 8;
-    if (!W) return;
-    if (this.cv.width < W) this.size();
+    const c = this.c, CW = this.cv.clientWidth, CH = this.cv.clientHeight;
+    if (!CW || !CH) return;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    if (this.cv.width !== Math.round(CW * dpr) || this.cv.height !== Math.round(CH * dpr)) this.size();
+    // the scene is designed 90px tall; scale it down to fit shorter banners so nothing gets cut off
+    const k = Math.min(1, CH / 90), W = CW / k, H = CH / k, g = H - 8;
+    c.setTransform(dpr * k, 0, 0, dpr * k, 0, 0);
     c.clearRect(0, 0, W, H);
     c.strokeStyle = c.fillStyle = 'rgba(255,255,255,0.9)'; c.lineCap = c.lineJoin = 'round';
     const line = pts => { c.beginPath(); c.moveTo(...pts[0]); pts.slice(1).forEach(p => c.lineTo(...p)); c.stroke(); };
