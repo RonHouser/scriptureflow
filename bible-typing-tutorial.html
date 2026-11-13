@@ -1,0 +1,2471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bible Typing Tutorial</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0b1424; --panel: #2b2f36; --panel-2: #33383f; --line: rgba(255,255,255,0.10);
+    --text: #e8ecf2; --muted: #9aa4b2; --accent: #6fa8ff; --gold: #e9c46a; --ok: #7bd389;
+  }
+  body {
+    background: radial-gradient(ellipse at 60% 40%, #16243d 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+    user-select: none;
+  }
+  /* ?embed=1 → fills an iframe with a transparent page background */
+  body.embed { background: transparent; padding: 0; }
+  body.embed #app { width: 100vw; height: 100vh; max-height: none; aspect-ratio: auto; border-radius: 0; border: none; }
+
+  #app {
+    width: min(1000px, 100%); aspect-ratio: 4 / 3; max-height: calc(100vh - 48px);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    position: relative; overflow: hidden; display: flex; flex-direction: column;
+  }
+  .view { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .view[hidden] { display: none; }
+
+  /* ---------- Menu ---------- */
+  header { text-align: center; padding: 22px 16px 6px; }
+  header h1 { font-family: Georgia, "Cormorant Garamond", serif; font-weight: 500; letter-spacing: .02em;
+    font-size: clamp(26px, 4vw, 40px); color: var(--accent); }
+  header p { color: var(--muted); font-size: 14px; margin-top: 6px; font-style: italic; }
+  #banner { width: 100%; height: 90px; display: block; }
+  main { flex: 1; display: grid; grid-template-columns: 220px 1fr; min-height: 0; border-top: 1px solid var(--line); }
+  nav { border-right: 1px solid var(--line); overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .lesson-btn { text-align: left; font: inherit; color: var(--text); background: transparent;
+    border: 1px solid transparent; border-radius: 10px; padding: 10px 12px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 2px; }
+  .lesson-btn small { color: var(--muted); font-size: 12px; }
+  .lesson-btn:hover { background: var(--panel-2); }
+  .lesson-btn[aria-selected="true"] { background: var(--panel-2); border-color: var(--accent); }
+  .lesson-btn.locked { opacity: .45; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #detail { padding: 18px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  #detail h2 { font-size: 22px; }
+  #detail .story { color: var(--muted); font-size: 14px; font-style: italic; }
+  .keys { display: flex; gap: 6px; flex-wrap: wrap; }
+  .key { min-width: 34px; height: 34px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 6px; background: #1f2329; border: 1px solid var(--line); font-weight: 700; }
+  .modules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .module { font: inherit; color: var(--text); text-align: left; background: #24282e; border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px;
+    transition: transform .15s ease, border-color .15s ease; }
+  .module:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent); }
+  .module:disabled { cursor: not-allowed; opacity: .5; }
+  .module .tag { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .module h3 { font-size: 16px; }
+  .module p { font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .module .status { margin-top: auto; font-size: 12px; color: var(--gold); }
+  .module .status.done { color: var(--ok); }
+  footer { border-top: 1px solid var(--line); padding: 10px 16px; display: flex; gap: 10px; justify-content: center; }
+  .pill { font: inherit; font-size: 13px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+  .pill:hover { border-color: var(--accent); }
+  #toast { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); background: #111; color: var(--text);
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 60; }
+  #toast.show { opacity: 1; }
+
+  /* ---------- Game ---------- */
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  #game-title { flex: 1; text-align: center; font-size: 14px; color: var(--muted); }
+  #game-title b { color: var(--text); }
+  .stage { flex: 1; position: relative; min-height: 0; }
+  #stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #overlay { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; text-align: center; padding: 24px; background: rgba(20, 23, 28, 0.82);
+    opacity: 0; pointer-events: none; transition: opacity .5s ease; }
+  #overlay.show { opacity: 1; pointer-events: auto; }
+  #ov-title { font-size: clamp(40px, 8vw, 84px); line-height: 1; color: #fff; }
+  #ov-verse { font-size: clamp(15px, 2vw, 20px); font-style: italic; color: var(--text); max-width: 680px; }
+  #ov-stats { font-size: 15px; color: var(--muted); line-height: 1.6; }
+  #ov-stats .hi { color: var(--gold); font-weight: 700; }
+  .ov-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  .ov-btns button { font: inherit; font-size: 17px; font-weight: 700; border-radius: 999px; padding: 11px 28px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text); }
+  .ov-btns button.primary { background: var(--accent); color: #0b1424; border-color: var(--accent); }
+  .ov-btns button[hidden] { display: none; }
+  #overlay .small { font-size: 12px; color: var(--muted); }
+
+  @media (max-width: 720px) {
+    #app { aspect-ratio: auto; height: calc(100vh - 48px); }
+    main { grid-template-columns: 1fr; }
+    nav { flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--line); }
+    .lesson-btn { min-width: 150px; }
+    .modules { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <section class="view" id="menu-view">
+    <header>
+      <h1>Bible Typing Tutorial</h1>
+      <p>“Whatsoever thy hand findeth to do, do it with thy might.” — Ecclesiastes 9:10</p>
+    </header>
+    <canvas id="banner" aria-hidden="true"></canvas>
+    <main>
+      <nav id="lessons" role="tablist" aria-label="Lessons"></nav>
+      <section id="detail" aria-live="polite"></section>
+    </main>
+    <footer>
+      <button type="button" class="pill" id="btn-progress">Progress</button>
+      <button type="button" class="pill" id="btn-sound-menu">Sound: On</button>
+      <button type="button" class="pill" id="btn-reset">Reset Progress</button>
+    </footer>
+  </section>
+
+  <section class="view" id="game-view" hidden>
+    <div class="topbar">
+      <button type="button" class="pill" id="btn-back">← Menu</button>
+      <div id="game-title"></div>
+      <button type="button" class="pill" id="btn-sound">Sound: On</button>
+    </div>
+    <div class="stage">
+      <canvas id="stage"></canvas>
+      <div id="overlay" role="dialog" aria-live="polite">
+        <h1 id="ov-title"></h1>
+        <p id="ov-verse"></p>
+        <p id="ov-stats"></p>
+        <div class="ov-btns">
+          <button type="button" id="ov-next">Next Module ▶</button>
+          <button type="button" id="ov-retry">Try Again</button>
+          <button type="button" id="ov-menu">Menu</button>
+        </div>
+        <p class="small">Enter = continue · Esc = menu</p>
+      </div>
+    </div>
+  </section>
+  <div id="toast" role="status"></div>
+</div>
+<script>
+(() => {
+'use strict';
+/* =====================================================================
+   CORE — helpers, sound, hands, typing engine
+   ===================================================================== */
+const TAU = Math.PI * 2;
+const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const lerp2 = (p, q, t) => [lerp(p[0], q[0], t), lerp(p[1], q[1], t)];
+const easeOut = t => 1 - (1 - t) * (1 - t);
+const easeOut3 = t => 1 - Math.pow(1 - t, 3);
+const easeIn = t => t * t;
+const easeInOut = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const rand = (a, b) => a + Math.random() * (b - a);
+const pickOne = arr => arr[Math.floor(Math.random() * arr.length)];
+
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+
+function pen(lw, a = 1, rgb = '255,255,255') {
+  ctx.strokeStyle = `rgba(${rgb},${a})`; ctx.fillStyle = `rgba(${rgb},${a})`;
+  ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+}
+function poly(pts) {
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+}
+function circle(x, y, r, fill) { ctx.beginPath(); ctx.arc(x, y, Math.max(0.1, r), 0, TAU); fill ? ctx.fill() : ctx.stroke(); }
+function star(x, y, s) {
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? s * 0.4 : s; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  ctx.closePath(); ctx.fill();
+}
+function rrect(x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function text(str, x, y, size, alpha = 1, weight = 700, color = '255,255,255') {
+  ctx.font = `${weight} ${size}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = `rgba(${color},${alpha})`; ctx.fillText(str, x, y);
+}
+// Two-bone IK → [joint, end]
+function ik(base, target, L1, L2, bend) {
+  let dx = target[0] - base[0], dy = target[1] - base[1];
+  let d = Math.hypot(dx, dy) || 0.0001, end = target;
+  if (d > L1 + L2 - 0.01) { const k = (L1 + L2 - 0.01) / d; end = [base[0] + dx * k, base[1] + dy * k]; d = L1 + L2 - 0.01; }
+  const a = Math.atan2(dy, dx);
+  const c = clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1);
+  const ang = a - bend * Math.acos(c);
+  return [[base[0] + Math.cos(ang) * L1, base[1] + Math.sin(ang) * L1], end];
+}
+function hills(off = 0) {
+  const w = E.sw, g = E.g, h = E.sh;
+  pen(2, 0.09); ctx.beginPath();
+  for (let i = 0; i <= 60; i++) {
+    const x = w * i / 60, u = (x + off) / w;
+    const y = g - h * (0.22 + 0.08 * Math.sin(u * 5.5 + 0.5) + 0.05 * Math.sin(u * 14 + 2));
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.stroke();
+}
+
+/* ---------- particles & floating text ---------- */
+function burst(list, x, y, n, kind, speed, size) {
+  for (let i = 0; i < n; i++) {
+    const a = kind === 'dust' ? Math.PI + Math.random() * Math.PI : kind === 'steam' ? -Math.PI / 2 + rand(-0.5, 0.5) : Math.random() * TAU;
+    const sp = speed * rand(0.4, 1.2);
+    list.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: rand(0.45, 0.9), kind, size: size * rand(0.7, 1.3) });
+  }
+}
+function stepParticles(list, dt) {
+  const grav = E.sh * 1.2;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const p = list[i]; p.life += dt;
+    if (p.life >= p.max) { list.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.kind === 'spark' || p.kind === 'drop') p.vy += grav * dt;
+    else if (p.kind === 'brick') { p.vy += grav * 1.4 * dt; p.rot += p.vr * dt; if (p.y > E.g - p.size * 0.5) { p.y = E.g - p.size * 0.5; p.vy *= -0.2; p.vx *= 0.6; p.vr *= 0.5; } }
+    else if (p.kind === 'dust') p.vy += grav * 0.3 * dt;
+    p.vx *= 0.96;
+  }
+}
+function drawParticles(list) {
+  for (const p of list) {
+    const k = 1 - p.life / p.max;
+    if (p.kind === 'spark') { pen(1, k); star(p.x, p.y, p.size * k); }
+    else if (p.kind === 'drop') { pen(1, 0.75 * k, '160,200,255'); circle(p.x, p.y, p.size, true); }
+    else if (p.kind === 'brick') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.globalAlpha = Math.min(1, k * 3); ctx.fillStyle = '#2b2f36'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.fillRect(-p.size, -p.size * 0.5, p.size * 2, p.size); ctx.strokeRect(-p.size, -p.size * 0.5, p.size * 2, p.size); ctx.restore(); }
+    else { pen(1, (p.kind === 'steam' ? 0.35 : 0.45) * k); circle(p.x, p.y, p.size * (1.6 - k * 0.6), true); }
+  }
+}
+function floatText(list, x, y, str, size, o = {}) {
+  list.push({ x, y, str, size, vx: o.vx ?? rand(-12, 12), vy: o.vy ?? -E.sh * 0.18, life: 0, max: o.max ?? 1.5 });
+}
+function stepFloats(list, dt) {
+  for (let i = list.length - 1; i >= 0; i--) {
+    const f = list[i]; f.life += dt;
+    if (f.life >= f.max) { list.splice(i, 1); continue; }
+    f.x += f.vx * dt; f.y += f.vy * dt;
+  }
+}
+function drawFloats(list) {
+  for (const f of list) { const k = 1 - f.life / f.max; text(f.str, f.x, f.y, f.size, Math.min(1, k * 1.6)); }
+}
+
+/* ---------- sound (Web Audio, no files needed) ---------- */
+const Sound = {
+  ac: null, master: null,
+  on: (() => { try { return localStorage.getItem('btt-sound') !== 'off'; } catch { return true; } })(),
+  set(on) { this.on = on; try { localStorage.setItem('btt-sound', on ? 'on' : 'off'); } catch {} },
+  ensure() {
+    if (!this.on) return null;
+    if (!this.ac) {
+      try {
+        this.ac = new (window.AudioContext || window.webkitAudioContext)();
+        this.master = this.ac.createGain(); this.master.gain.value = 0.45; this.master.connect(this.ac.destination);
+      } catch { return null; }
+    }
+    if (this.ac.state === 'suspended') this.ac.resume();
+    return this.ac;
+  },
+  pluck(freq, vol = 0.22, dur = 1.6) {
+    const ac = this.ensure(); if (!ac) return;
+    const t = ac.currentTime;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const f = ac.createBiquadFilter(); f.type = 'lowpass';
+    f.frequency.setValueAtTime(freq * 7, t); f.frequency.exponentialRampToValueAtTime(freq * 1.6, t + dur * 0.6);
+    f.connect(g); g.connect(this.master);
+    [[1, 'triangle', 1], [2, 'sine', 0.35], [3, 'sine', 0.12]].forEach(([m, type, a]) => {
+      const o = ac.createOscillator(); o.type = type; o.frequency.value = freq * m;
+      const og = ac.createGain(); og.gain.value = a; o.connect(og); og.connect(f);
+      o.start(t); o.stop(t + dur + 0.05);
+    });
+  },
+  noise(dur, vol, fromF, toF, type = 'lowpass') {
+    const ac = this.ensure(); if (!ac) return;
+    const t = ac.currentTime, n = Math.floor(ac.sampleRate * dur);
+    const buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const f = ac.createBiquadFilter(); f.type = type;
+    f.frequency.setValueAtTime(fromF, t); f.frequency.exponentialRampToValueAtTime(toF, t + dur);
+    const g = ac.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.master); src.start(t);
+  },
+  whoosh() { this.noise(0.35, 0.25, 500, 3000, 'bandpass'); },
+  thud() { this.noise(0.22, 0.5, 900, 90); },
+  boom() { this.noise(0.7, 0.8, 380, 35); },
+  twang() { this.pluck(116, 0.12, 0.5); this.pluck(123, 0.12, 0.5); }
+};
+// D-major pentatonic, one note per keyboard column
+const NOTES = [293.66, 329.63, 369.99, 440, 493.88, 587.33, 659.25, 739.99, 880, 987.77];
+const COL = { q: 0, w: 1, e: 2, r: 3, t: 4, y: 5, u: 6, i: 7, o: 8, p: 9, a: 0, s: 1, d: 2, f: 3, g: 4, h: 5, j: 6, k: 7, l: 8, ';': 9 };
+const noteFor = ch => NOTES[COL[ch] ?? 0] * ('asdfghjkl;'.includes(ch) ? 0.5 : 1);
+
+/* ---------- finger map ---------- */
+// 0 L-pinky, 1 L-ring, 2 L-middle, 3 L-index, 4 R-index, 5 R-middle, 6 R-ring, 7 R-pinky, 8 thumbs
+const FINGER = {};
+[['qaz1', 0], ['wsx2', 1], ['edc3', 2], ['rfvtgb45', 3], ['yhnujm67', 4], ['ik,8', 5], ['ol.9', 6], ['p;/0', 7]]
+  .forEach(([s, f]) => { for (const c of s) FINGER[c] = f; });
+FINGER[' '] = 8; FINGER["'"] = 7;
+// shifted characters → the base key that produces them
+const SHIFTED = { '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '?': '/', ':': ';', '"': "'" };
+const needsShift = ch => /[A-Z]/.test(ch) || ch in SHIFTED;
+// which fingers to light up: main finger + opposite pinky for Shift
+function fingersFor(ch) {
+  if (ch == null) return { main: -1, shift: -1 };
+  const base = SHIFTED[ch] || ch.toLowerCase();
+  const main = FINGER[base] ?? -1;
+  return { main, shift: needsShift(ch) ? (main < 4 ? 7 : 0) : -1 };
+}
+const glyph = ch => ch === ' ' ? '␣' : ch;
+const HOME_KEYS = ['a', 's', 'd', 'f', 'j', 'k', 'l', ';'];
+const TOP_ROW = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'];
+
+function drawHands(act, ch, top, h, W, press, miss, alpha) {
+  const active = act.main;
+  ctx.save(); ctx.globalAlpha = alpha;
+  const hw = Math.min(W * 0.2, h * 1.1);
+  const fw = hw * 0.185, gap = hw * 0.05, L = h * 0.46, palmH = h * 0.34;
+  const lens = [0.62, 0.8, 0.88, 0.76];               // pinky → index
+  const palmTop = top + h * 0.06 + L * 0.88;
+  const span = 4 * fw + 3 * gap;
+  [W * 0.5 - hw * 0.8, W * 0.5 + hw * 0.8].forEach((cx, side) => {
+    const x0 = cx - span / 2;
+    const fill = on => {
+      if (on) {
+        ctx.fillStyle = miss > 0 ? `rgba(${Math.round(lerp(111, 255, miss))},${Math.round(lerp(168, 120, miss))},${Math.round(lerp(255, 120, miss))},0.95)` : 'rgba(111,168,255,0.95)';
+        ctx.strokeStyle = '#d6e6ff'; ctx.lineWidth = 2.5;
+      } else { ctx.fillStyle = '#30353c'; ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1.6; }
+      ctx.fill(); ctx.stroke();
+    };
+    // thumb
+    ctx.save();
+    ctx.translate(side === 0 ? cx + span / 2 - fw * 0.1 : cx - span / 2 + fw * 0.1, palmTop + palmH * 0.5);
+    ctx.rotate(side === 0 ? 0.95 : -0.95);
+    rrect(-fw / 2, -L * 0.62 + (active === 8 ? press * L * 0.06 : 0), fw, L * 0.7, fw / 2); fill(active === 8);
+    if (active === 8) text('␣', 0, -L * 0.42, fw * 0.6, 1, 700, '11,20,36');
+    ctx.restore();
+    // fingers
+    for (let j = 0; j < 4; j++) {
+      const fi = side === 0 ? j : 4 + j;
+      const len = L * lens[side === 0 ? j : 3 - j];
+      const on = fi === active, sh = fi === act.shift;
+      const fx = x0 + j * (fw + gap);
+      const fy = palmTop - len + (on ? press * L * 0.08 : 0);
+      if (on) { ctx.save(); ctx.shadowColor = 'rgba(111,168,255,0.8)'; ctx.shadowBlur = 16; rrect(fx, fy, fw, len + fw, fw / 2); fill(true); ctx.restore(); }
+      else if (sh) { rrect(fx, fy, fw, len + fw, fw / 2); ctx.fillStyle = 'rgba(233,196,106,0.9)'; ctx.strokeStyle = '#f5e2b0'; ctx.lineWidth = 2.5; ctx.fill(); ctx.stroke(); }
+      else { rrect(fx, fy, fw, len + fw, fw / 2); fill(false); }
+      if (sh) text('⇧', fx + fw / 2, fy + fw * 0.62, fw * 0.6, 1, 700, '11,20,36');
+      else text(on ? (SHIFTED[ch] || ch.toLowerCase()) : HOME_KEYS[fi], fx + fw / 2, fy + fw * 0.62, fw * (on ? 0.7 : 0.55), on ? 1 : 0.4, 700, on ? '11,20,36' : '255,255,255');
+    }
+    // palm (covers finger bases)
+    rrect(x0 - fw * 0.15, palmTop - fw * 0.15, span + fw * 0.3, palmH, fw * 0.9);
+    ctx.fillStyle = '#30353c'; ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1.6; ctx.fill(); ctx.stroke();
+    text(side === 0 ? 'LEFT' : 'RIGHT', cx, palmTop + palmH * 0.45, fw * 0.42, 0.3, 600);
+  });
+  ctx.restore();
+}
+
+/* ---------- progress ---------- */
+const Progress = {
+  data: (() => { try { return JSON.parse(localStorage.getItem('btt-progress-v2')) || {}; } catch { return {}; } })(),
+  get(id) { return this.data[id] || {}; },
+  save() { try { localStorage.setItem('btt-progress-v2', JSON.stringify(this.data)); } catch {} },
+  record(id, res) {
+    const p = this.data[id] || {};
+    let isBest = false;
+    if (res.win) p.done = true;
+    if (res.score != null && (p.best == null || res.score > p.best)) { isBest = p.best != null || !!res.win; p.best = res.score; p.bestLabel = res.bestLabel; }
+    this.data[id] = p; this.save();
+    return isBest;
+  },
+  reset() { this.data = {}; this.save(); }
+};
+
+/* ---------- typing engine ---------- */
+const APPROACH = 0.52, EXIT_NORMAL = 0.28, EXIT_FAST = 0.14;
+const STACK_OPACITY = [1.0, 0.80, 0.62, 0.45, 0.30];
+
+const E = {
+  W: 0, H: 0, dpr: 1, sw: 0, sh: 0, g: 0, F: 0, trackY: 0, handTop: 0, handH: 0,
+  mod: null, S: null, state: 'idle', clock: 0, elapsed: 0,
+  queue: [], cur: null, approach: 0, exiting: [],
+  typed: 0, misses: 0, press: 0, missT: 0, trackAlpha: 1, shake: 0, lastRes: null,
+
+  resize() {
+    const r = canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.W = r.width; this.H = r.height;
+    canvas.width = Math.round(this.W * this.dpr); canvas.height = Math.round(this.H * this.dpr);
+    this.sh = this.H * 0.55; this.sw = this.W; this.g = this.sh * 0.94;
+    this.F = Math.min(this.H * 0.12, this.W * 0.1);
+    this.trackY = this.H * 0.655; this.handTop = this.H * 0.75; this.handH = this.H * 0.25;
+  },
+
+  start(mod) {
+    this.mod = mod; this.S = { particles: [], floats: [] };
+    this.state = 'ready'; this.elapsed = 0; this.typed = 0; this.misses = 0;
+    this.queue = []; this.exiting = []; this.trackAlpha = 1; this.shake = 0; this.press = 0; this.missT = 0;
+    UI.showGame(mod); this.resize();
+    mod.init(this.S);
+    this.fill(); this.cur = this.queue.shift(); this.fill(); this.approach = 0;
+  },
+  pick() {
+    const m = this.mod;
+    let c = m.pick ? m.pick(this.S, this.queue) : pickOne(m.keys);
+    const q = this.queue, n = q.length;
+    if (!m.pick && n >= 2 && q[n - 1] === c && q[n - 2] === c) c = pickOne(m.keys);   // avoid triples
+    return c;
+  },
+  fill() { while (this.queue.length < 6) this.queue.push(this.pick()); },
+
+  key(e) {
+    if (UI.view !== 'game') return;
+    if (UI.overlayOpen) {
+      if (e.key === 'Enter') { e.preventDefault(); UI.primary(); }
+      else if (e.key === 'Escape') { e.preventDefault(); UI.showMenu(); }
+      return;
+    }
+    if (e.key === 'Escape') { e.preventDefault(); UI.showMenu(); return; }
+    if (this.state !== 'ready' && this.state !== 'playing') return;
+    if (e.ctrlKey || e.altKey || e.metaKey || e.key.length > 1) return;
+    e.preventDefault();
+    const expected = this.cur, k = this.mod.caseSensitive ? e.key : e.key.toLowerCase();
+    if (k === expected) {
+      if (this.state === 'ready') this.state = 'playing';
+      this.typed++; this.press = 1;
+      this.exiting.push({ ch: expected, p: easeOut3(clamp(this.approach / APPROACH)), t: 0, dur: this.approach < APPROACH ? EXIT_FAST : EXIT_NORMAL });
+      this.cur = this.queue.shift(); this.fill(); this.approach = 0;
+      this.mod.onKey(this.S, true, k, expected);
+    } else {
+      this.missT = 1;
+      if (this.state === 'playing') { this.misses++; this.mod.onKey(this.S, false, k, expected); }
+    }
+  },
+  end() { if (this.state === 'ready' || this.state === 'playing') this.state = 'ending'; },
+  finish(res) {
+    if (this.state === 'done') return;
+    this.state = 'done'; this.lastRes = res;
+    res.newBest = Progress.record(this.mod.id, res);
+    UI.showOverlay(res);
+  },
+  accuracy() { const t = this.typed + this.misses; return t ? this.typed / t : 1; },
+  wpm() { return this.elapsed > 1 ? Math.round((this.typed / 5) / (this.elapsed / 60)) : 0; },
+
+  update(dt) {
+    this.clock += dt;
+    const m = this.mod; if (!m) return;
+    if (this.state === 'playing') {
+      this.elapsed += dt;
+      if (this.elapsed >= m.duration) { this.state = 'ending'; m.onTimeUp(this.S); }
+    }
+    m.update(this.S, dt);
+    stepParticles(this.S.particles, dt); stepFloats(this.S.floats, dt);
+    this.approach += dt;
+    for (let i = this.exiting.length - 1; i >= 0; i--) { const x = this.exiting[i]; x.t += dt; if (x.t >= x.dur) this.exiting.splice(i, 1); }
+    this.press = Math.max(0, this.press - dt * 6);
+    this.missT = Math.max(0, this.missT - dt * 3);
+    this.shake = Math.max(0, this.shake - dt * 40);
+    const ending = this.state === 'ending' || this.state === 'done';
+    this.trackAlpha = ending ? Math.max(0, this.trackAlpha - dt * 2.5) : 1;
+  },
+
+  render() {
+    const { W, H } = this;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (!this.mod || !W) return;
+    // scene
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W, this.sh); ctx.clip();
+    if (this.shake > 0) ctx.translate(rand(-0.5, 0.5) * this.shake, rand(-0.5, 0.5) * this.shake);
+    this.mod.render(this.S);
+    ctx.restore();
+    pen(2.5, 0.6); poly([[0, this.g + 1], [W, this.g + 1]]);
+    if (this.state === 'ready') text(this.mod.hint || 'Type the letter to begin', W / 2, this.sh * 0.08, Math.max(13, this.H * 0.026), 0.75, 600);
+    this.drawTrack();
+    if (this.S.line) this.drawLine(this.S.line);
+    const ending = this.state === 'ending' || this.state === 'done';
+    drawHands(ending ? { main: -1, shift: -1 } : fingersFor(this.cur), this.cur, this.handTop, this.handH, W, this.press, this.missT, ending ? 0.35 : 1);
+  },
+
+  // passage line: typed part dim, current char boxed, rest bright
+  drawLine(L) {
+    if (this.trackAlpha <= 0.01 || !L.text) return;
+    const size = Math.max(12, Math.min(this.H * 0.03, this.W * 0.028)), y = this.H * 0.578;
+    ctx.save(); ctx.globalAlpha = this.trackAlpha;
+    ctx.font = `600 ${size}px ${FONT}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    const maxW = this.W * 0.9;
+    let a = 0, b = L.text.length;
+    while (ctx.measureText(L.text.slice(a, b)).width > maxW) { if (L.pos - a > b - L.pos) a++; else b--; }
+    const s = L.text.slice(a, b), x0 = (this.W - ctx.measureText(s).width) / 2, p = L.pos - a;
+    const w1 = ctx.measureText(s.slice(0, p)).width, wc = ctx.measureText(s[p] || ' ').width;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillText(s.slice(0, p), x0, y);
+    ctx.fillStyle = 'rgba(111,168,255,0.35)'; rrect(x0 + w1 - 2, y - size * 0.7, wc + 4, size * 1.4, 4); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.fillText(s.slice(p), x0 + w1, y);
+    if (L.ref) { ctx.textAlign = 'center'; ctx.font = `italic 500 ${size * 0.7}px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillText(L.ref, this.W / 2, y - size * 1.25); }
+    ctx.restore();
+  },
+  drawTrack() {
+    if (this.trackAlpha <= 0.01) return;
+    const { W, F } = this, cy = this.trackY, cx = W / 2, sF = F * 0.37;
+    const sx0 = W * 0.68, step = sF * 1.35;
+    ctx.save(); ctx.globalAlpha = this.trackAlpha;
+    for (let i = 0; i < 5; i++) if (this.queue[i]) text(glyph(this.queue[i]), sx0 + step * (i + 1), cy, sF, STACK_OPACITY[i]);
+    for (const x of this.exiting) {
+      const p = easeIn(clamp(x.t / x.dur));
+      const s = lerp(lerp(0.37, 1, x.p), 0.82, p);
+      text(glyph(x.ch), lerp(sx0, cx, x.p) - W * 0.28 * p, cy, F * s, 1 - p);
+    }
+    if (this.cur) {
+      const p = easeOut3(clamp(this.approach / APPROACH));
+      const shakeX = this.missT * Math.sin(this.clock * 80) * F * 0.06;
+      const col = this.missT > 0 ? `255,${Math.round(lerp(255, 130, this.missT))},${Math.round(lerp(255, 130, this.missT))}` : '255,255,255';
+      text(glyph(this.cur), lerp(sx0, cx, p) + shakeX, cy, F * lerp(0.37, 1, p), 1, 700, col);
+    }
+    ctx.restore();
+  }
+};
+
+let lastFrame = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
+  if (UI.view === 'game') { E.update(dt); E.render(); }
+  else if (UI.view === 'menu') Banner.draw(now);
+  requestAnimationFrame(frame);
+}
+new ResizeObserver(() => E.resize()).observe(canvas);
+document.addEventListener('keydown', e => E.key(e));
+
+
+/* =====================================================================
+   LESSON 1 — HOME ROW (David and Goliath)
+   ===================================================================== */
+const SWING = TAU / 0.26;   // one sling revolution ≈ 0.26 s
+function newSling() {
+  return { angle: Math.PI / 2, target: Math.PI / 2, raise: 0, lastSwingAt: -1e9, releases: [], snap: 0, reload: 1, cheer: 0, cheerT: 0, cheerOn: false, squash: 1 };
+}
+function slingStep(sl, dt) {
+  const diff = sl.target - sl.angle;
+  if (diff > 1e-6) { const w = Math.max(SWING, diff * 7); sl.angle = Math.min(sl.target, sl.angle + w * dt); sl.lastSwingAt = E.clock; }
+  const goal = (diff > 1e-6 || E.clock - sl.lastSwingAt < 0.45) ? 1 : 0;
+  sl.raise += (goal - sl.raise) * Math.min(1, dt * 12);
+  let fired = 0;
+  while (sl.releases.length && sl.angle >= sl.releases[0]) { sl.releases.shift(); fired++; }
+  sl.snap = Math.max(0, sl.snap - dt / 0.35); sl.reload += dt;
+  if (sl.cheerOn) { sl.cheer = Math.min(1, sl.cheer + dt * 4); sl.cheerT += dt; }
+  return fired;
+}
+// queue a release on the swing just added: pouch forward-and-up
+const releaseAngle = target => target - Math.PI / 2 - 0.35;
+
+function slingRig(x, g, h, sl) {
+  const lw = Math.max(2.5, h * 0.035);
+  const legL = h * 0.46, torso = h * 0.30, r = h * 0.10, armL = h * 0.30;
+  const bob = sl.cheer > 0 ? -Math.abs(Math.sin(sl.cheerT * 8)) * h * 0.10 * sl.cheer : 0;
+  const hip = [x, g - legL * 0.97 + bob], sh = [x, hip[1] - torso], head = [x, sh[1] - r * 1.35];
+  const feet = [[x - h * 0.11, g + bob], [x + h * 0.11, g + bob]];
+  const rest = [sh[0] + armL * 0.30, sh[1] + armL * 0.86];
+  const up = [sh[0] + armL * 0.12, sh[1] - armL * 0.90];
+  const snap = [sh[0] + armL * 0.92, sh[1] - armL * 0.30];
+  let handT = lerp2(rest, up, easeInOut(clamp(sl.raise)));
+  handT = lerp2(handT, snap, sl.snap);
+  handT = lerp2(handT, [sh[0] + armL * 0.45, sh[1] - armL * 0.85], sl.cheer);
+  const backT = lerp2([sh[0] - armL * 0.28, sh[1] + armL * 0.88], [sh[0] - armL * 0.45, sh[1] - armL * 0.85], sl.cheer);
+  const [elbow, hand] = ik(sh, handT, armL / 2, armL / 2, -1);
+  const [elbowB, handB] = ik(sh, backT, armL / 2, armL / 2, -1);
+  const sway = sl.raise < 0.05 ? Math.sin(E.clock * 2) * 0.12 : 0;
+  const theta = sl.angle + sway, slL = h * 0.22;
+  const pouch = [hand[0] + Math.cos(theta) * slL, hand[1] + Math.sin(theta) * slL];
+  return { x, lw, legL, r, hip, sh, head, feet, elbow, hand, elbowB, handB, theta, slL, pouch, rockR: Math.max(2.5, h * 0.028) };
+}
+function drawSlingDavid(R, sl, showRock, trail = 0) {
+  ctx.save();
+  if (sl.squash < 1) { ctx.translate(R.x, E.g); ctx.scale(1 + (1 - sl.squash) * 1.3, sl.squash); ctx.translate(-R.x, -E.g); }
+  pen(R.lw);
+  for (const f of R.feet) { const [k, ft] = ik(R.hip, f, R.legL / 2, R.legL / 2, 1); poly([R.hip, k, ft]); }
+  poly([R.hip, R.sh]);
+  circle(R.head[0], R.head[1], R.r, false);
+  circle(R.head[0] + R.r * 0.45, R.head[1] - R.r * 0.1, R.lw * 0.45, true);
+  poly([R.sh, R.elbowB, R.handB]); poly([R.sh, R.elbow, R.hand]);
+  if (trail > 0.05) {
+    pen(R.lw * 0.8, 0.22); ctx.beginPath(); ctx.arc(R.hand[0], R.hand[1], R.slL, R.theta - trail, R.theta); ctx.stroke();
+  }
+  const px = Math.cos(R.theta + Math.PI / 2) * R.rockR * 1.2, py = Math.sin(R.theta + Math.PI / 2) * R.rockR * 1.2;
+  pen(Math.max(1.2, R.lw * 0.35));
+  poly([R.hand, [R.pouch[0] + px, R.pouch[1] + py]]); poly([R.hand, [R.pouch[0] - px, R.pouch[1] - py]]);
+  pen(Math.max(1.5, R.lw * 0.5)); poly([[R.pouch[0] + px, R.pouch[1] + py], [R.pouch[0] - px, R.pouch[1] - py]]);
+  if (showRock) { pen(1); circle(R.pouch[0], R.pouch[1], R.rockR, true); }
+  ctx.restore();
+}
+function newRock(sx, sy, tx, ty, dur, arc, extra = {}) { return Object.assign({ sx, sy, tx, ty, t: 0, dur, arc, x: sx, y: sy, trail: [] }, extra); }
+function stepRock(r, dt) {
+  r.t += dt; const p = clamp(r.t / r.dur);
+  r.x = lerp(r.sx, r.tx, p); r.y = lerp(r.sy, r.ty, p) - r.arc * 4 * p * (1 - p);
+  r.trail.push([r.x, r.y]); if (r.trail.length > 6) r.trail.shift();
+  return p >= 1;
+}
+function drawRock(r, rad) {
+  r.trail.forEach((p, i) => { pen(1, 0.12 * (i + 1)); circle(p[0], p[1], rad * 0.7, true); });
+  pen(1); circle(r.x, r.y, rad, true);
+}
+const davidX = () => Math.max(E.sw * 0.12, E.sh * 0.24);
+
+/* ---------------------------------------------------------------------
+   L1 · M1 — POWER THE SLING (right hand, SPEED → distance)
+   --------------------------------------------------------------------- */
+const PowerSling = {
+  id: 'L1M2', title: 'Power the Sling', keys: ['j', 'k', 'l', ';'], duration: 30, GOAL: 75,
+  hint: 'Right fingers on J K L ; · type fast to spin the sling',
+  ppc() { return E.sw * 0.8 / 60; },             // pixels per cubit
+  init(S) { Object.assign(S, { sl: newSling(), power: 0, energy: 0, phase: 'spin', cam: 0, flight: null, dist: 0, endT: 0, landed: false, relAt: 0 }); },
+  onKey(S, ok) {
+    if (S.phase !== 'spin') return;
+    if (ok) { S.energy++; S.power += 0.25 * (1 - S.power); }
+    else S.power *= 0.8;
+  },
+  onTimeUp(S) {
+    const acc = E.accuracy();
+    S.dist = Math.max(1, Math.round(S.energy * 3.2 * acc * acc));
+    S.phase = 'windup'; S.power = Math.max(S.power, 0.45);
+    const a = S.sl.angle, target = -0.35;
+    let d = (((target - a) % TAU) + TAU) % TAU; if (d < 0.6) d += TAU;
+    S.relAt = a + d;
+  },
+  update(S, dt) {
+    const sl = S.sl, hD = E.sh * 0.4, dX = davidX();
+    if (S.phase === 'spin' || S.phase === 'windup') {
+      if (E.state === 'playing') S.power -= 0.35 * S.power * dt;
+      if (S.power > 0.03) { sl.angle += lerp(4, 28, S.power) * dt; sl.lastSwingAt = E.clock; }
+      sl.target = sl.angle;
+      if (S.phase === 'windup' && sl.angle >= S.relAt) {
+        const R = slingRig(dX, E.g, hD, sl);
+        const landX = dX + S.dist * this.ppc();
+        S.flight = newRock(R.pouch[0], R.pouch[1], landX, E.g - 3, clamp(1 + S.dist / 50, 1.2, 4), Math.min(E.sh * 0.55, E.sh * 0.25 + S.dist * 2));
+        S.phase = 'flight'; sl.snap = 1; sl.reload = 0; S.power = 0; Sound.whoosh();
+      }
+    }
+    slingStep(sl, dt);
+    if (S.phase === 'flight') {
+      if (stepRock(S.flight, dt)) {
+        S.phase = 'landed'; S.endT = 0; E.shake = 6; Sound.thud();
+        burst(S.particles, S.flight.x, E.g, 14, 'dust', E.sh * 0.4, E.sh * 0.03);
+      }
+      S.cam = Math.max(0, S.flight.x - E.sw * 0.45);
+    }
+    if (S.phase === 'landed') {
+      S.endT += dt;
+      if (S.dist >= this.GOAL) sl.cheerOn = true;
+      if (S.endT > 1.8) {
+        const win = S.dist >= this.GOAL;
+        E.finish({
+          win, title: win ? 'Mighty Throw!' : 'Try Again',
+          verse: win ? '“…and took thence a stone, and slang it…” — 1 Samuel 17:49' : '“…they shall run, and not be weary…” — Isaiah 40:31',
+          lines: [`Distance: ${S.dist} cubits  ·  Goal: ${this.GOAL} cubits`], score: S.dist, bestLabel: `${S.dist} cubits`
+        });
+      }
+    }
+  },
+  render(S) {
+    const hD = E.sh * 0.4, dX = davidX(), ppc = this.ppc(), g = E.g;
+    hills(S.cam * 0.4);
+    ctx.save(); ctx.translate(-S.cam, 0);
+    // distance markers
+    const fs = Math.max(10, E.sh * 0.045);
+    for (let c = 10; c <= 400; c += 10) {
+      const x = dX + c * ppc; if (x < S.cam - 40 || x > S.cam + E.sw + 40) continue;
+      pen(2, 0.35); poly([[x, g], [x, g - E.sh * 0.03]]);
+      text(String(c), x, g - E.sh * 0.07, fs, 0.4, 600);
+    }
+    const flag = (c, label, a) => {
+      const x = dX + c * ppc; pen(2.5, a); poly([[x, g], [x, g - E.sh * 0.35]]);
+      ctx.beginPath(); ctx.moveTo(x, g - E.sh * 0.35); ctx.lineTo(x + E.sh * 0.12, g - E.sh * 0.31); ctx.lineTo(x, g - E.sh * 0.27); ctx.closePath(); ctx.fill();
+      text(label, x, g - E.sh * 0.41, fs, a);
+    };
+    flag(this.GOAL, 'Goal', 0.85);
+    const best = Progress.get(this.id).best;
+    if (best && Math.abs(best - this.GOAL) > 4) flag(best, 'Best', 0.4);
+    const R = slingRig(dX, g, hD, S.sl);
+    const w = (S.phase === 'spin' || S.phase === 'windup') && S.power > 0.03 ? lerp(4, 28, S.power) : 0;
+    drawSlingDavid(R, S.sl, S.phase === 'spin' || S.phase === 'windup', clamp(w * 0.07, 0, 2.6));
+    if (S.power > 0.55) { pen(1, (S.power - 0.55) * 0.6); circle(R.pouch[0], R.pouch[1], R.rockR * 2.2, true); }
+    if (S.flight) {
+      if (S.phase === 'flight') drawRock(S.flight, Math.max(2.5, hD * 0.028));
+      else {
+        pen(1); circle(S.flight.tx, g - 3, Math.max(2.5, hD * 0.028), true);
+        text(`${S.dist} cubits`, S.flight.tx, g - E.sh * 0.18 - easeOut(clamp(S.endT * 3)) * E.sh * 0.05, Math.max(16, E.sh * 0.09), clamp(S.endT * 3));
+      }
+    }
+    drawParticles(S.particles);
+    ctx.restore();
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L1 · M2 — STRIKE THE MARK (left hand, ACCURACY → rings)
+   --------------------------------------------------------------------- */
+const StrikeMark = {
+  id: 'L1M1', title: 'Strike the Mark', keys: ['a', 's', 'd', 'f'], duration: 30, WIN_AVG: 7,
+  hint: 'Left fingers on A S D F · 5 clean letters = bullseye',
+  tgt() { const R = E.sh * 0.25; return { x: E.sw * 0.8, y: E.g - E.sh * 0.5, R }; },
+  init(S) { Object.assign(S, { sl: newSling(), charge: 0, missWin: 0, pending: [], rocks: [], marks: [], throws: 0, score: 0, wobble: 0, phase: 'play', endT: 0 }); },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    if (!ok) { S.missWin++; return; }
+    S.sl.target += TAU; S.charge++;
+    if (S.charge >= 5) { S.charge = 0; S.sl.releases.push(releaseAngle(S.sl.target)); S.pending.push(S.missWin); S.missWin = 0; }
+  },
+  onTimeUp(S) { S.phase = 'end'; S.endT = 0; },
+  launch(S) {
+    const m = S.pending.shift() ?? 0, hD = E.sh * 0.4;
+    const R = slingRig(davidX(), E.g, hD, S.sl), T = this.tgt();
+    let mark = null, pts = 0;
+    if (m < 5) {
+      const k = Math.min(m, 4), r = (k === 0 ? rand(0, 0.7) : rand(k + 0.1, k + 0.9)) / 5, a = rand(0, TAU);
+      mark = [Math.cos(a) * r, Math.sin(a) * r]; pts = 10 - 2 * k;
+    }
+    const tx = mark ? T.x + mark[0] * T.R : T.x + T.R * 1.4, ty = mark ? T.y + mark[1] * T.R : E.g - 3;
+    S.rocks.push(newRock(R.pouch[0], R.pouch[1], tx, ty, 0.5, hD * 0.3, { mark, pts }));
+    S.sl.snap = 1; S.sl.reload = 0; Sound.whoosh();
+  },
+  update(S, dt) {
+    const fired = slingStep(S.sl, dt);
+    for (let i = 0; i < fired; i++) this.launch(S);
+    S.wobble = Math.max(0, S.wobble - dt * 2.5);
+    const T = this.tgt();
+    for (let i = S.rocks.length - 1; i >= 0; i--) {
+      const r = S.rocks[i];
+      if (r.mark) { r.tx = T.x + r.mark[0] * T.R; r.ty = T.y + r.mark[1] * T.R; }
+      if (stepRock(r, dt)) {
+        S.rocks.splice(i, 1); S.throws++;
+        if (r.mark) {
+          S.marks.push(r.mark); S.score += r.pts; S.wobble = 1; Sound.thud();
+          burst(S.particles, r.x, r.y, 8, 'spark', E.sh * 0.6, E.sh * 0.02);
+          floatText(S.floats, r.x, r.y - T.R * 0.3, r.pts === 10 ? 'Bullseye! +10' : `+${r.pts}`, Math.max(14, E.sh * 0.07));
+        } else {
+          burst(S.particles, r.x, E.g, 10, 'dust', E.sh * 0.3, E.sh * 0.025);
+          floatText(S.floats, r.x, E.g - E.sh * 0.15, 'Miss', Math.max(14, E.sh * 0.07));
+        }
+      }
+    }
+    if (S.phase === 'end' && !S.sl.releases.length && !S.rocks.length) {
+      S.endT += dt;
+      const avg = S.throws ? S.score / S.throws : 0, win = S.throws >= 3 && avg >= this.WIN_AVG;
+      if (win) S.sl.cheerOn = true;
+      if (S.endT > 1.4) {
+        E.finish({
+          win, title: win ? 'Bullseye!' : 'Try Again',
+          verse: win ? '“…every one could sling stones at an hair breadth, and not miss.” — Judges 20:16' : '“Let thine eyes look right on…” — Proverbs 4:25',
+          lines: [`Stones: ${S.throws}  ·  Score: ${S.score}  ·  Average: ${avg.toFixed(1)} / 10`, `Goal: average ${this.WIN_AVG}+ with at least 3 stones`],
+          score: S.score, bestLabel: `${S.score} pts`
+        });
+      }
+    }
+  },
+  render(S) {
+    hills();
+    const T = this.tgt(), wob = Math.sin(E.clock * 40) * S.wobble * T.R * 0.04, x = T.x + wob;
+    const lw = Math.max(2, E.sh * 0.012);
+    pen(lw * 1.4); poly([[T.x, T.y + T.R], [T.x, E.g]]); poly([[T.x - T.R * 0.4, E.g], [T.x, E.g - T.R * 0.35], [T.x + T.R * 0.4, E.g]]);
+    ctx.fillStyle = '#2b2f36'; circle(x, T.y, T.R, true);
+    for (let i = 0; i < 5; i++) {
+      const rr = T.R * (5 - i) / 5;
+      if (i % 2 === 0) { pen(1, 0.07); circle(x, T.y, rr, true); }
+      pen(lw, 0.85); circle(x, T.y, rr, false);
+    }
+    pen(1, 0.9); circle(x, T.y, T.R * 0.08, true);
+    for (const m of S.marks) {
+      ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#1b1e23'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x + m[0] * T.R, T.y + m[1] * T.R, Math.max(3, T.R * 0.055), 0, TAU); ctx.fill(); ctx.stroke();
+    }
+    const hD = E.sh * 0.4, R = slingRig(davidX(), E.g, hD, S.sl);
+    drawSlingDavid(R, S.sl, S.sl.reload > 0.3 && S.phase === 'play');
+    for (const r of S.rocks) drawRock(r, R.rockR);
+    drawParticles(S.particles); drawFloats(S.floats);
+    if (S.phase === 'play') drawVolleyPips(R.x, E.g - hD * 1.25, hD * 0.025, S.charge, S.missWin);
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L1 · M3 — FACE THE GIANT (both hands, SPEED + ACCURACY)
+   Speed = how often stones fly (every 5 correct letters).
+   Accuracy = where each stone lands (mistakes in that volley) → stun length.
+   --------------------------------------------------------------------- */
+// shared "volley quality" zones: index = mistakes in the volley
+const ZONE_STUN = [1.0, 0.6, 0.4, 0.25, 0];
+function drawVolleyPips(cx, y, size, charge, misses, n = 5) {
+  for (let i = 0; i < n; i++) { pen(1.5, i < charge ? 0.9 : 0.25); circle(cx + (i - (n - 1) / 2) * size * 4, y, size, i < charge); }
+  if (misses > 0) text('✕'.repeat(Math.min(misses, 4)), cx, y - size * 5, size * 3, 0.8, 700, '255,140,140');
+}
+const FaceGiant = {
+  id: 'L1M3', title: 'Face the Giant', keys: HOME_KEYS, duration: 45,
+  FIELD: 40,
+  ZONES: ['Headshot!', 'Shoulder', 'Chest', 'Knee', 'Miss'],
+  CFG: { PER: 5, LPS: 1.0, MARGIN: 0.8, TYPICAL_STUN: 0.6 },
+  hint: 'Both hands on the home row · clean volleys of 5 hit his head',
+  dims() {
+    const hD = E.sh * 0.40, hG = E.sh * 0.80, dX = davidX(), startX = E.sw * 0.86;
+    return { hD, hG, dX, startX, reachX: Math.min(dX + hG * 0.36, startX - 10) };
+  },
+  init(S) {
+    const c = this.CFG, throws = this.duration * c.LPS * c.MARGIN / c.PER;
+    Object.assign(S, { sl: newSling(), progress: 0, walk: 0, stunUntil: -1, hitFlash: 0, hitZone: 0, rocks: [], charge: 0, missWin: 0, pending: [],
+      stones: 0, zoneCount: [0, 0, 0, 0, 0], stunTotal: 0,
+      phase: 'play', endT: 0, impact: false, fall: 0, fallDir: 1, down: false, lunge: 0, stomp: null, stompStart: null,
+      travel: this.duration - throws * c.TYPICAL_STUN });
+  },
+  gx(S, d) { return lerp(d.startX, d.reachX, S.progress); },
+  zonePoint(G, z) {
+    switch (z) {
+      case 0: return [G.head[0] - G.r * 0.6, G.head[1]];
+      case 1: return [G.sh[0] - G.r * 0.4, G.sh[1] + G.r * 0.2];
+      case 2: return lerp2(G.sh, G.hip, 0.5);
+      case 3: return G.kneeF;
+      default: return [G.gx + G.h * 0.45, E.g - 3];
+    }
+  },
+  gRig(S, d) {
+    const h = d.hG, g = E.g, stunned = E.clock < S.stunUntil;
+    let gx = this.gx(S, d) + S.lunge;
+    const lw = Math.max(3.5, h * 0.028);
+    if (stunned) gx += Math.sin(E.clock * 90) * lw * 0.7 * (S.hitZone === 0 ? 1 : 0.5);
+    const legL = h * 0.44, torso = h * 0.32, r = h * 0.07, armL = h * 0.34, ph = S.walk, stride = h * 0.11, lift = h * 0.05;
+    const hip = [gx, g - legL * 0.96 + Math.abs(Math.sin(ph)) * h * 0.008];
+    const lean = stunned ? (S.hitZone === 0 ? 0.07 : 0.03) : -0.08;
+    const sh = [hip[0] + torso * lean, hip[1] - torso], head = [sh[0] + torso * lean * 0.3, sh[1] - r * 1.3];
+    let fF = [gx - Math.sin(ph) * stride, g - Math.max(0, Math.cos(ph)) * lift];
+    let fB = [gx + Math.sin(ph) * stride, g - Math.max(0, -Math.cos(ph)) * lift];
+    if (S.stomp) { fF = S.stomp; fB = [gx + stride * 0.6, g]; }
+    const [kneeF, footF] = ik(hip, fF, legL / 2, legL / 2, -1), [kneeB, footB] = ik(hip, fB, legL / 2, legL / 2, -1);
+    let hFt = [sh[0] - armL * 0.2 + Math.sin(ph) * armL * 0.3, sh[1] + armL * 0.85];
+    if (stunned) hFt = S.hitZone === 0 ? [head[0] - r * 0.2, head[1] + r * 0.9] : S.hitZone === 1 ? [sh[0] - r * 0.4, sh[1] + r * 0.4]
+      : S.hitZone === 2 ? lerp2(sh, hip, 0.5) : [kneeF[0] - r * 0.2, kneeF[1] - r * 0.3];
+    if (S.phase === 'lose') hFt = [sh[0] - armL * 0.55, sh[1] - armL * 0.6];
+    const hBt = [sh[0] + armL * 0.35 - Math.sin(ph) * armL * 0.1, sh[1] + armL * 0.7];
+    const [elbowF, hF] = ik(sh, hFt, armL / 2, armL / 2, 1), [elbowB, hB] = ik(sh, hBt, armL / 2, armL / 2, 1);
+    return { gx, lw, r, h, hip, sh, head, kneeF, footF, kneeB, footB, elbowF, hF, elbowB, hB, stunned };
+  },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    if (!ok) { S.missWin++; return; }
+    S.sl.target += TAU; S.charge++;
+    if (S.charge >= this.CFG.PER) {
+      S.charge = 0; S.stones++;
+      S.pending.push(Math.min(S.missWin, 4)); S.missWin = 0;
+      S.sl.releases.push(releaseAngle(S.sl.target));
+    }
+  },
+  onTimeUp(S) {
+    const d = this.dims();
+    S.phase = 'win'; S.endT = 0; S.impact = false; S.rocks = []; S.sl.releases = []; S.pending = [];
+    S.stunUntil = E.clock + 0.35; S.hitZone = 0;
+    S.fallDir = (this.gx(S, d) - d.dX) > d.hG * 1.05 + d.hD * 0.25 ? -1 : 1;
+  },
+  update(S, dt) {
+    const d = this.dims(), sl = S.sl;
+    const fired = slingStep(sl, dt);
+    for (let i = 0; i < fired; i++) {
+      const zone = S.pending.shift() ?? 0;
+      const R = slingRig(d.dX, E.g, d.hD, sl), P = this.zonePoint(this.gRig(S, d), zone);
+      const dist = Math.hypot(P[0] - R.pouch[0], P[1] - R.pouch[1]);
+      S.rocks.push(newRock(R.pouch[0], R.pouch[1], P[0], P[1], clamp(dist / (E.sw * 0.9), 0.25, 0.55), d.hD * 0.35, { zone }));
+      sl.reload = 0; sl.snap = 1; Sound.whoosh();
+    }
+    S.hitFlash = Math.max(0, S.hitFlash - dt * 3);
+    for (let i = S.rocks.length - 1; i >= 0; i--) {
+      const r = S.rocks[i];
+      [r.tx, r.ty] = this.zonePoint(this.gRig(S, d), r.zone);
+      if (stepRock(r, dt)) {
+        S.rocks.splice(i, 1);
+        const stun = ZONE_STUN[r.zone], fs = Math.max(14, E.sh * (r.zone === 0 ? 0.08 : 0.06));
+        S.zoneCount[r.zone]++;
+        if (stun > 0) {
+          const until = E.clock + stun;
+          S.stunTotal += Math.max(0, until - Math.max(E.clock, S.stunUntil));
+          S.stunUntil = Math.max(S.stunUntil, until);
+          S.hitZone = r.zone; S.hitFlash = 1; Sound.thud();
+          burst(S.particles, r.tx, r.ty, r.zone === 0 ? 12 : 6, 'spark', d.hD * (r.zone === 0 ? 2.2 : 1.4), d.hD * 0.04);
+          floatText(S.floats, r.tx, r.ty - d.hG * 0.12, this.ZONES[r.zone], fs);
+        } else {
+          burst(S.particles, r.tx, E.g, 10, 'dust', d.hD * 0.8, d.hD * 0.04);
+          floatText(S.floats, r.tx, E.g - d.hG * 0.25, 'Miss', fs);
+        }
+      }
+    }
+    if (E.state === 'playing' && S.phase === 'play' && E.clock >= S.stunUntil) {
+      const before = this.gx(S, d);
+      S.progress = Math.min(1, S.progress + dt / S.travel);
+      S.walk += Math.PI * Math.abs(before - this.gx(S, d)) / (2 * d.hG * 0.11);
+      if (S.progress >= 1) {
+        E.end(); S.phase = 'lose'; S.endT = 0; S.impact = false; S.rocks = []; sl.releases = []; S.pending = [];
+        S.stompStart = this.gRig(S, d).footF; S.stomp = S.stompStart;
+      }
+    }
+    const zc = S.zoneCount, hits = `Headshots ${zc[0]} · Shoulder ${zc[1]} · Chest ${zc[2]} · Knee ${zc[3]} · Missed ${zc[4]}`;
+    if (S.phase === 'lose') {
+      S.endT += dt; const t = S.endT, up = [d.dX, E.g - d.hD * 1.2];
+      S.lunge = -d.hG * 0.14 * easeInOut(clamp(t / 0.58));
+      if (t < 0.45) S.stomp = lerp2(S.stompStart, up, easeOut(t / 0.45));
+      else {
+        const e = easeIn(clamp((t - 0.45) / 0.13)), y = lerp(up[1], E.g - d.hD * 0.12, e);
+        S.stomp = [d.dX, y]; sl.squash = clamp((E.g - y) / (d.hD * 1.05), 0.12, 1);
+        if (e >= 1 && !S.impact) { S.impact = true; E.shake = 16; Sound.boom(); burst(S.particles, d.dX, E.g, 22, 'dust', d.hD * 1.6, d.hD * 0.05); }
+      }
+      if (t > 1.7) E.finish({ win: false, title: 'Try Again', verse: '“Be strong and of a good courage…” — Joshua 1:9',
+        lines: [`Goliath reached David with ${Math.max(0, Math.ceil(this.duration - E.elapsed))}s left`, hits, 'Tip: clean volleys of 5 hit the head and stun him longest.'] });
+    }
+    if (S.phase === 'win') {
+      S.endT += dt;
+      const f = clamp((S.endT - 0.35) / 0.75);
+      S.fall = S.fallDir * (Math.PI / 2) * easeIn(f);
+      if (f >= 1 && !S.impact) {
+        S.impact = true; S.down = true; E.shake = 14; Sound.boom();
+        const gx = this.gx(S, d);
+        for (let i = 0; i <= 6; i++) burst(S.particles, gx + S.fallDir * d.hG * 0.9 * (i / 6), E.g, 4, 'dust', d.hD * 1.2, d.hD * 0.05);
+      }
+      if (S.endT > 1.1) sl.cheerOn = true;
+      if (S.endT > 2.4) {
+        const left = Math.max(0, Math.round(this.FIELD * (1 - S.progress)));
+        E.finish({ win: true, title: 'Victory!', verse: '“…for the battle is the LORD’s.” — 1 Samuel 17:47',
+          lines: [`<hi>Goliath fell ${left} cubits from David</hi>`, hits, `Total stun time: ${S.stunTotal.toFixed(1)}s`],
+          score: left, bestLabel: `${left} cubits away` });
+      }
+    }
+  },
+  drawGoliath(S, d) {
+    const G = this.gRig(S, d);
+    ctx.save();
+    if (S.fall) { const pv = [G.gx, E.g - G.lw * 0.5]; ctx.translate(pv[0], pv[1] - Math.abs(S.fall) / (Math.PI / 2) * G.h * 0.07); ctx.rotate(S.fall); ctx.translate(-pv[0], -pv[1]); }
+    pen(G.lw * 0.6);
+    const sB = [G.hB[0] + G.h * 0.10, G.hB[1] + G.h * 0.30], sT = [G.hB[0] - G.h * 0.12, G.hB[1] - G.h * 0.62];
+    poly([sB, sT]); spearHead(sT, Math.atan2(sT[1] - sB[1], sT[0] - sB[0]), G.h);
+    pen(G.lw);
+    poly([G.sh, G.elbowB, G.hB]); poly([G.hip, G.kneeB, G.footB]); poly([G.hip, G.kneeF, G.footF]); poly([G.hip, G.sh]);
+    pen(G.lw * 0.6); poly([[G.hip[0] - G.r * 0.9, G.hip[1] + G.r * 0.6], [G.hip[0], G.hip[1] - G.r * 0.2], [G.hip[0] + G.r * 0.9, G.hip[1] + G.r * 0.6]]);
+    pen(G.lw); poly([G.sh, G.elbowF, G.hF]);
+    if (S.hitFlash > 0 && S.hitZone > 0 && S.hitZone < 4) { const p = this.zonePoint(G, S.hitZone); pen(G.lw, 0.25 * S.hitFlash); circle(p[0], p[1], G.r * 1.3, true); pen(G.lw); }
+    const [hx, hy] = G.head, r = G.r;
+    if (S.hitFlash > 0 && S.hitZone === 0) { pen(G.lw, 0.25 * S.hitFlash); circle(hx, hy, r * 1.8, true); pen(G.lw); }
+    circle(hx, hy, r, false);
+    ctx.beginPath(); ctx.arc(hx, hy, r * 1.15, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
+    poly([[hx - r * 1.35, hy - r * 0.1], [hx + r * 1.35, hy - r * 0.1]]);
+    poly([[hx, hy - r * 1.15], [hx + r * 0.35, hy - r * 1.9], [hx + r * 1.2, hy - r * 1.6]]);
+    pen(G.lw * 0.55); poly([[hx - r * 0.35, hy - r * 0.1], [hx - r * 0.35, hy + r * 0.45]]);
+    if (S.down) { const ex = hx - r * 0.6, ey = hy + r * 0.2, s = r * 0.22; poly([[ex - s, ey - s], [ex + s, ey + s]]); poly([[ex - s, ey + s], [ex + s, ey - s]]); }
+    else circle(hx - r * 0.65, hy + r * 0.2, G.lw * 0.4, true);
+    ctx.restore();
+    if (G.stunned && !S.down && S.hitZone === 0) { pen(1, 0.95); for (let i = 0; i < 3; i++) { const a = E.clock * 9 + i * TAU / 3; star(hx + Math.cos(a) * r * 1.7, hy - r * 1.9 + Math.sin(a) * r * 0.5, r * 0.32); } }
+  },
+  render(S) {
+    const d = this.dims();
+    hills();
+    fieldMarks(d.reachX, d.startX, this.FIELD, Progress.get(this.id).best);
+    this.drawGoliath(S, d);
+    const R = slingRig(d.dX, E.g, d.hD, S.sl);
+    drawSlingDavid(R, S.sl, S.sl.reload > 0.3 && S.phase === 'play');
+    for (const r of S.rocks) drawRock(r, R.rockR);
+    drawParticles(S.particles); drawFloats(S.floats);
+    if (S.phase === 'play') drawVolleyPips(R.x, E.g - d.hD * 1.25, d.hD * 0.025, S.charge, S.missWin);
+  }
+};
+// cubit ticks from `x0` (0) to `x1` (field), plus a "Best" flag at `best` cubits from x0
+function fieldMarks(x0, x1, field, best) {
+  const g = E.g, fs = Math.max(9, E.sh * 0.038);
+  for (let c = 0; c <= field; c += 10) {
+    const x = lerp(x0, x1, c / field);
+    pen(2, 0.25); poly([[x, g], [x, g - E.sh * 0.025]]);
+    if (c > 0) text(String(c), x, g - E.sh * 0.06, fs, 0.3, 600);
+  }
+  if (best > 0) {
+    const x = lerp(x0, x1, Math.min(best, field) / field), top = g - E.sh * 0.22;
+    pen(2, 0.45); poly([[x, g], [x, top]]);
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x + E.sh * 0.07, top + E.sh * 0.025); ctx.lineTo(x, top + E.sh * 0.05); ctx.closePath(); ctx.fill();
+    text('Best', x, top - E.sh * 0.035, fs, 0.45);
+  }
+}
+function spearHead(tip, ang, h) {
+  const tl = h * 0.06, tw = h * 0.022;
+  ctx.beginPath(); ctx.moveTo(tip[0] + Math.cos(ang) * tl, tip[1] + Math.sin(ang) * tl);
+  ctx.lineTo(tip[0] + Math.cos(ang + Math.PI / 2) * tw, tip[1] + Math.sin(ang + Math.PI / 2) * tw);
+  ctx.lineTo(tip[0] - Math.cos(ang + Math.PI / 2) * tw, tip[1] - Math.sin(ang + Math.PI / 2) * tw); ctx.closePath(); ctx.fill();
+}
+
+/* =====================================================================
+   LESSON 2 — TOP ROW (David the harpist)
+   ===================================================================== */
+// Lyre (kinnor). base = bottom of sound box. Returns string tops for note effects.
+function drawLyre(cx, base, h, o = {}) {
+  const n = o.n || 5, w = h * 0.62, boxH = h * 0.2, lw = o.lw || Math.max(2, h * 0.025);
+  pen(lw);
+  rrect(cx - w * 0.42, base - boxH, w * 0.84, boxH, boxH * 0.35); ctx.stroke();
+  const bl = [cx - w * 0.36, base - boxH], br = [cx + w * 0.36, base - boxH];
+  const tl = [cx - w * 0.5, base - h * 0.98], tr = [cx + w * 0.5, base - h * 0.9];
+  ctx.beginPath(); ctx.moveTo(bl[0], bl[1]); ctx.quadraticCurveTo(cx - w * 0.72, base - h * 0.55, tl[0], tl[1]); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(br[0], br[1]); ctx.quadraticCurveTo(cx + w * 0.74, base - h * 0.5, tr[0], tr[1]); ctx.stroke();
+  poly([[tl[0] - w * 0.08, tl[1] + h * 0.03], [tr[0] + w * 0.08, tr[1] + h * 0.03]]);
+  const tops = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n;
+    const b = [lerp(cx - w * 0.27, cx + w * 0.27, t), base - boxH];
+    const tp = lerp2([tl[0], tl[1] + h * 0.03], [tr[0], tr[1] + h * 0.03], lerp(0.14, 0.86, t));
+    tops.push(tp);
+    const ten = o.tension ? o.tension[i] : 1, vib = o.vib ? o.vib[i] : 0;
+    const off = (1 - ten) * w * 0.09 + vib * w * 0.05 * Math.sin(E.clock * 70 + i * 1.7) + (1 - ten) * w * 0.02 * Math.sin(E.clock * 3 + i);
+    const mid = lerp2(b, tp, 0.5);
+    if (o.glow && ten >= 1) { pen(lw * 1.8, 0.12); ctx.beginPath(); ctx.moveTo(b[0], b[1]); ctx.quadraticCurveTo(mid[0] + off * 2, mid[1], tp[0], tp[1]); ctx.stroke(); }
+    pen(Math.max(1, lw * 0.45), 0.3 + 0.7 * ten);
+    ctx.beginPath(); ctx.moveTo(b[0], b[1]); ctx.quadraticCurveTo(mid[0] + off * 2, mid[1], tp[0], tp[1]); ctx.stroke();
+    if (o.pegs) {
+      pen(lw * 0.6); circle(tp[0], tp[1] - h * 0.03, lw * 1.5, false);
+      const a = o.pegs[i]; poly([[tp[0], tp[1] - h * 0.03], [tp[0] + Math.cos(a) * lw * 2.4, tp[1] - h * 0.03 + Math.sin(a) * lw * 2.4]]);
+    }
+    if (o.labels) text(o.labels[i], b[0], base - boxH * 0.45, boxH * 0.5, ten >= 1 ? 0.95 : 0.55);
+  }
+  return tops;
+}
+// David playing (or reaching toward) a lyre, facing right.
+function harpDavid(x, g, h, o = {}) {
+  const lw = Math.max(2.5, h * 0.035), r = h * 0.1, torso = h * 0.3, legL = h * 0.46, armL = h * 0.3;
+  ctx.save();
+  if (o.fall) { ctx.translate(x - h * 0.1, g); ctx.rotate(-o.fall * Math.PI / 2 * 0.92); ctx.translate(-(x - h * 0.1), -g); }
+  pen(lw);
+  let hip;
+  if (o.sit) {
+    const seatY = g - h * 0.24; hip = [x, seatY];
+    pen(lw * 0.8, 0.55); ctx.beginPath(); ctx.ellipse(x - h * 0.03, g, h * 0.2, h * 0.24, 0, Math.PI, TAU); ctx.stroke();
+    pen(lw);
+    poly([hip, [x + h * 0.2, seatY - h * 0.02], [x + h * 0.24, g]]);
+    poly([hip, [x + h * 0.16, seatY + h * 0.01], [x + h * 0.15, g]]);
+  } else {
+    hip = [x, g - legL * 0.97];
+    for (const f of [[x - h * 0.1, g], [x + h * 0.1, g]]) { const [k, ft] = ik(hip, f, legL / 2, legL / 2, 1); poly([hip, k, ft]); }
+  }
+  const sh = [x + h * 0.02, hip[1] - torso], head = [sh[0], sh[1] - r * 1.35];
+  poly([hip, sh]); circle(head[0], head[1], r, false);
+  if (o.fall > 0.6) { const s = r * 0.2, ex = head[0] + r * 0.45, ey = head[1]; poly([[ex - s, ey - s], [ex + s, ey + s]]); poly([[ex - s, ey + s], [ex + s, ey - s]]); }
+  else circle(head[0] + r * 0.45, head[1] - r * 0.1, lw * 0.45, true);
+  let notes = null;
+  if (o.reach) {
+    const [e1, h1] = ik(sh, o.reach, armL * 0.55, armL * 0.55, -1); poly([sh, e1, h1]);
+    const [e2, h2] = ik(sh, [sh[0] + armL * 0.4, hip[1] - h * 0.02], armL / 2, armL / 2, -1); poly([sh, e2, h2]);
+  } else {
+    const lh = h * 0.42, lcx = x + h * 0.3, lbase = sh[1] + h * 0.3;
+    const tops = drawLyre(lcx, lbase, lh, { lw: lw * 0.7, vib: Array(5).fill(o.vib || 0) });
+    pen(lw);
+    const [e1, h1] = ik(sh, [lcx - lh * 0.22, lbase - lh * 0.1], armL / 2, armL / 2, -1); poly([sh, e1, h1]);
+    const pk = o.pluck || 0;
+    const [e2, h2] = ik(sh, [lcx + lh * (0.02 + pk * 0.14), lbase - lh * (0.5 + pk * 0.08)], armL / 2, armL / 2, -1); poly([sh, e2, h2]);
+    notes = [lcx, tops[2][1]];
+  }
+  ctx.restore();
+  return { notes, chest: [sh[0], sh[1] + torso * 0.3], head };
+}
+function playNote(S, ch, from) {
+  Sound.pluck(noteFor(ch));
+  S.pluck = 1; S.vib = 1;
+  if (from) floatText(S.floats, from[0] + rand(-6, 6), from[1], pickOne(['♪', '♫']), Math.max(14, E.sh * 0.07), { vx: rand(10, 40), vy: -E.sh * 0.22, max: 1.4 });
+}
+
+/* ---------------------------------------------------------------------
+   L2 · M1 — TUNE THE HARP (left hand top row)
+   --------------------------------------------------------------------- */
+const TuneHarp = {
+  id: 'L2M1', title: 'Tune the Harp', keys: ['q', 'w', 'e', 'r', 't'], duration: 40, NEED: 6,
+  hint: 'Left hand: reach up from A S D F · each letter tightens its string',
+  init(S) { Object.assign(S, { tune: [0, 0, 0, 0, 0], vib: [0, 0, 0, 0, 0], peg: [0, 0, 0, 0, 0], phase: 'play', endT: 0, arp: 0, pluck: 0 }); },
+  pick(S, queue) {
+    const rem = this.keys.map((k, i) => Math.max(0, this.NEED - S.tune[i] - queue.filter(q => q === k).length));
+    const tot = rem.reduce((a, b) => a + b, 0);
+    if (tot <= 0) return pickOne(this.keys);
+    let r = Math.random() * tot;
+    for (let i = 0; i < rem.length; i++) { r -= rem[i]; if (r < 0) return this.keys[i]; }
+    return this.keys[4];
+  },
+  lyre() { const h = E.sh * 0.82; return { cx: E.sw * 0.6, base: E.g - E.sh * 0.02, h }; },
+  freq(S, i) { return NOTES[i] * (1 - 0.06 * (1 - S.tune[i] / this.NEED)); },
+  onKey(S, ok, ch, expected) {
+    if (S.phase !== 'play') return;
+    const L = this.lyre();
+    if (ok) {
+      const i = this.keys.indexOf(ch);
+      if (S.tune[i] < this.NEED) S.tune[i]++;
+      S.vib[i] = 1; S.peg[i] += 0.9; S.pluck = 1;
+      Sound.pluck(this.freq(S, i));
+      S.lastTops && floatText(S.floats, S.lastTops[i][0], S.lastTops[i][1] - L.h * 0.08, '♪', Math.max(14, E.sh * 0.07));
+      if (S.tune[i] === this.NEED && !S['done' + i]) {
+        S['done' + i] = true;
+        S.lastTops && burst(S.particles, S.lastTops[i][0], S.lastTops[i][1], 10, 'spark', E.sh * 0.5, E.sh * 0.025);
+      }
+      if (S.tune.every(t => t >= this.NEED)) { S.phase = 'win'; S.endT = 0; E.end(); }
+    } else {
+      const i = this.keys.indexOf(expected);
+      if (S.tune[i] > 0 && S.tune[i] < this.NEED) S.tune[i]--;
+      S.vib[i] = 0.7; S.peg[i] -= 0.6;
+      Sound.pluck(this.freq(S, i) * 0.94, 0.15, 0.6);
+    }
+  },
+  onTimeUp(S) { S.phase = 'lose'; S.endT = 0; },
+  update(S, dt) {
+    for (let i = 0; i < 5; i++) S.vib[i] = Math.max(0, S.vib[i] - dt * 1.6);
+    S.pluck = Math.max(0, S.pluck - dt * 5);
+    const tuned = S.tune.filter(t => t >= this.NEED).length;
+    if (S.phase === 'win') {
+      S.endT += dt;
+      const k = Math.floor(S.endT / 0.18);
+      if (k > S.arp - 1 && S.arp < 8) {
+        const i = [0, 1, 2, 3, 4, 3, 2, 4][S.arp];
+        Sound.pluck(NOTES[i]); S.vib[i] = 1; S.pluck = 1;
+        S.lastTops && floatText(S.floats, S.lastTops[i][0], S.lastTops[i][1], '♫', Math.max(16, E.sh * 0.08));
+        S.arp++;
+      }
+      if (S.endT > 2.4) E.finish({ win: true, title: 'In Tune!', verse: '“…David took an harp, and played with his hand…” — 1 Samuel 16:23',
+        lines: ['All five strings are tuned.'], score: Math.round(E.accuracy() * 100), bestLabel: `${Math.round(E.accuracy() * 100)}% accuracy` });
+    }
+    if (S.phase === 'lose') {
+      S.endT += dt;
+      if (S.endT > 1.2) E.finish({ win: false, title: 'Try Again', verse: '“…play skilfully with a loud noise.” — Psalm 33:3', lines: [`Strings tuned: ${tuned} / 5`] });
+    }
+  },
+  render(S) {
+    hills();
+    const L = this.lyre();
+    S.lastTops = drawLyre(L.cx, L.base, L.h, { tension: S.tune.map(t => t / this.NEED), vib: S.vib, pegs: S.peg, labels: this.keys, glow: true, lw: Math.max(3, L.h * 0.022) });
+    const dh = E.sh * 0.55;
+    const reach = [L.cx - L.h * 0.25 + S.pluck * L.h * 0.06, L.base - L.h * 0.45];
+    harpDavid(E.sw * 0.3, E.g, dh, { sit: true, reach });
+    drawParticles(S.particles); drawFloats(S.floats);
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L2 · M2 — GATHER THE FLOCK (right hand top row, steady rhythm)
+   --------------------------------------------------------------------- */
+const GatherFlock = {
+  id: 'L2M2', title: 'Gather the Flock', keys: ['y', 'u', 'i', 'o', 'p'], duration: 40, N: 7, WIN: 5,
+  hint: 'Right hand: reach up from J K L ; · keep a steady rhythm',
+  init(S) {
+    S.flow = 0.12; S.last = -1; S.phase = 'play'; S.endT = 0; S.pluck = 0; S.vib = 0; S.count = 0;
+    S.sheep = [];
+    for (let i = 0; i < this.N; i++) {
+      S.sheep.push({ x: rand(0.66, 0.97), d: (i % 3) / 2, th: (i + 1) / (this.N + 1), home: 0.38 + (i % 4) * 0.075 + (i >= 4 ? 0.04 : 0),
+        wx: rand(0.66, 0.97), wt: rand(1, 3), walk: rand(0, 6), lie: 0, face: -1, gathered: false });
+    }
+  },
+  onKey(S, ok, ch) {
+    if (S.phase !== 'play') return;
+    if (ok) {
+      const gap = S.last < 0 ? 0.5 : E.clock - S.last;
+      S.flow += 0.1 * (1 - S.flow) * (gap < 1.6 ? 1 : 0.6); S.last = E.clock;
+      playNote(S, ch, S.noteAt);
+    } else { S.flow = Math.max(0, S.flow - 0.08); Sound.twang(); }
+  },
+  onTimeUp(S) {
+    S.phase = 'end'; S.endT = 0;
+    S.count = S.sheep.filter(s => Math.abs(s.x - s.home) < 0.05).length;
+    S.sheep.forEach(s => s.final = Math.abs(s.x - s.home) < 0.05);
+  },
+  update(S, dt) {
+    S.pluck = Math.max(0, S.pluck - dt * 5); S.vib = Math.max(0, S.vib - dt * 2);
+    if (E.state === 'playing' && S.phase === 'play') S.flow -= 0.06 * S.flow * (E.clock - S.last > 1.6 ? 3 : 1) * dt;
+    for (const s of S.sheep) {
+      const want = S.phase === 'end' ? s.final : S.flow >= s.th;
+      s.wt -= dt; if (s.wt <= 0) { s.wx = rand(0.66, 0.97); s.wt = rand(2, 4); }
+      const tx = want ? s.home : s.wx, dx = tx - s.x;
+      if (Math.abs(dx) > 0.004) { const v = Math.sign(dx) * Math.min(Math.abs(dx), 0.08 * dt); s.x += v; s.face = Math.sign(dx); s.walk += dt * 9; s.lie = Math.max(0, s.lie - dt * 3); }
+      else if (want) s.lie = Math.min(1, s.lie + dt * 1.2);
+    }
+    if (S.phase === 'end') {
+      S.endT += dt;
+      if (S.endT > 2.2) {
+        const win = S.count >= this.WIN;
+        E.finish({ win, title: win ? 'The Flock Is Safe!' : 'Try Again',
+          verse: win ? '“The LORD is my shepherd; I shall not want.” — Psalm 23:1' : '“My sheep hear my voice, and I know them…” — John 10:27',
+          lines: [`Sheep gathered: ${S.count} / ${this.N}  ·  Goal: ${this.WIN}`], score: S.count, bestLabel: `${S.count} / ${this.N} sheep` });
+      }
+    }
+  },
+  sheep(x, y, s, face, walk, lie) {
+    const by = y - s * lerp(0.55, 0.32, lie);
+    if (lie < 1) {
+      pen(s * 0.07);
+      [-0.3, -0.12, 0.12, 0.3].forEach((lx, i) => {
+        const sw = Math.sin(walk + i * Math.PI) * s * 0.08 * (1 - lie);
+        poly([[x + lx * s, by + s * 0.1], [x + lx * s + sw, lerp(y, by + s * 0.12, lie)]]);
+      });
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    [[-0.25, 0], [0, -0.12], [0.25, 0], [0, 0.07], [-0.1, 0.02], [0.12, 0.03]].forEach(([ox, oy]) => { ctx.beginPath(); ctx.arc(x + ox * s, by + oy * s, s * 0.24, 0, TAU); ctx.fill(); });
+    const hx = x + face * s * 0.45, hy = by - s * 0.1;
+    ctx.fillStyle = '#2b2f36'; ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1.5, s * 0.05);
+    ctx.beginPath(); ctx.ellipse(hx, hy, s * 0.15, s * 0.12, face * 0.3, 0, TAU); ctx.fill(); ctx.stroke();
+    pen(1); circle(hx + face * s * 0.05, hy - s * 0.02, Math.max(1, s * 0.025), true);
+  },
+  render(S) {
+    hills();
+    // tree
+    const tx = E.sw * 0.1, g = E.g, th = E.sh * 0.7;
+    pen(Math.max(3, th * 0.03)); poly([[tx, g], [tx, g - th * 0.6]]); poly([[tx, g - th * 0.45], [tx + th * 0.12, g - th * 0.6]]);
+    pen(Math.max(2, th * 0.02), 0.7);
+    [[0, -0.78, 0.2], [-0.15, -0.68, 0.15], [0.16, -0.7, 0.16]].forEach(([ox, oy, r]) => circle(tx + ox * th, g + oy * th, r * th, false));
+    const D = harpDavid(E.sw * 0.22, g, E.sh * 0.5, { sit: true, pluck: S.pluck, vib: S.vib });
+    S.noteAt = D.notes;
+    const s0 = E.sh * 0.13;
+    [...S.sheep].sort((a, b) => a.d - b.d).forEach(s => this.sheep(s.x * E.sw, g - (1 - s.d) * E.sh * 0.1, s0 * lerp(0.78, 1, s.d), s.face, s.walk, s.lie));
+    drawParticles(S.particles); drawFloats(S.floats);
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L2 · M3 — SOOTHE THE KING (both hands)
+   --------------------------------------------------------------------- */
+const SootheSaul = {
+  id: 'L2M3', title: 'Soothe the King', keys: TOP_ROW, duration: 45,
+  CFG: { START: 0.35, RISE: 0.032, CALM: 0.028, MISS: 0.07 },
+  hint: 'Both hands · top row with some home row · keep the king calm',
+  pick() { return Math.random() < 0.75 ? pickOne(TOP_ROW) : pickOne(HOME_KEYS); },
+  init(S) { Object.assign(S, { anger: this.CFG.START, shown: this.CFG.START, peak: 0.35, phase: 'play', endT: 0, spear: null, fall: 0, pluck: 0, vib: 0, sleep: 0, steamT: 0, zT: 0, flinch: 0 }); },
+  dims() { return { dX: E.sw * 0.22, dH: E.sh * 0.5, tx: E.sw * 0.74, sH: E.sh * 0.62 }; },
+  onKey(S, ok, ch) {
+    if (S.phase !== 'play') return;
+    if (ok) { S.anger = Math.max(0, S.anger - this.CFG.CALM); playNote(S, ch, S.noteAt); }
+    else { S.anger += this.CFG.MISS; S.flinch = 1; Sound.twang(); }
+  },
+  onTimeUp(S) { S.phase = 'win'; S.endT = 0; },
+  saul(S, d) {
+    const h = d.sH, g = E.g, tx = d.tx, lw = Math.max(2.5, h * 0.035), r = h * 0.1, torso = h * 0.32, armL = h * 0.32;
+    const a = S.shown, seatY = g - h * 0.3;
+    const st = S.phase === 'throw' ? easeOut(clamp(S.endT / 0.35)) : 0;
+    let lean = lerp(0.3, -0.18, a) + (a > 0.6 ? Math.sin(E.clock * 50) * (a - 0.6) * 0.08 : 0) - S.flinch * 0.06;
+    lean = lerp(lean, -0.1, st);
+    const hip = [lerp(tx + h * 0.08, tx - h * 0.02, st), lerp(seatY - lw, g - h * 0.44, st) - S.sleep * h * 0.03];
+    const sh = [hip[0] + Math.sin(lean) * torso, hip[1] - Math.cos(lean) * torso];
+    const head = [sh[0] + Math.sin(lean * 1.4 + S.sleep * 0.3) * r * 1.35, sh[1] - Math.cos(lean * 1.4) * r * 1.35];
+    return { h, lw, r, armL, a, st, hip, sh, head, seatY, tx };
+  },
+  update(S, dt) {
+    const d = this.dims();
+    S.pluck = Math.max(0, S.pluck - dt * 5); S.vib = Math.max(0, S.vib - dt * 2); S.flinch = Math.max(0, S.flinch - dt * 3);
+    if (E.state === 'playing' && S.phase === 'play') {
+      S.anger += this.CFG.RISE * dt; S.peak = Math.max(S.peak, S.anger);
+      if (S.anger >= 1) { S.anger = 1; S.phase = 'throw'; S.endT = 0; E.end(); }
+    }
+    if (S.phase === 'win') S.anger = Math.max(0, S.anger - dt * 0.6);
+    S.shown += (S.anger - S.shown) * Math.min(1, dt * 3);
+    const P = this.saul(S, d);
+    if (S.shown > 0.8 && S.phase !== 'win') {
+      S.steamT -= dt;
+      if (S.steamT <= 0) { S.steamT = 0.18; burst(S.particles, P.head[0] + rand(-1, 1) * P.r, P.head[1] - P.r * 1.6, 1, 'steam', E.sh * 0.25, E.sh * 0.02); }
+    }
+    if (S.phase === 'throw') {
+      S.endT += dt;
+      if (S.endT > 0.55 && !S.spear) {
+        const hand = [P.sh[0] - P.armL * 0.3, P.sh[1] - P.armL * 0.7];
+        const target = [d.dX + d.dH * 0.02, E.g - d.dH * 0.62];
+        S.spear = { x: hand[0], y: hand[1], sx: hand[0], sy: hand[1], tx: target[0], ty: target[1], t: 0, hit: false, ang: Math.atan2(target[1] - hand[1], target[0] - hand[0]) };
+        Sound.whoosh();
+      }
+      if (S.spear && !S.spear.hit) {
+        const sp = S.spear; sp.t += dt; const p = clamp(sp.t / 0.32);
+        sp.x = lerp(sp.sx, sp.tx, p); sp.y = lerp(sp.sy, sp.ty, p) - E.sh * 0.06 * 4 * p * (1 - p);
+        if (p >= 1) { sp.hit = true; E.shake = 12; Sound.thud(); burst(S.particles, sp.x, sp.y, 10, 'spark', E.sh * 0.5, E.sh * 0.02); }
+      }
+      if (S.spear && S.spear.hit) {
+        const sp = S.spear; S.fall = Math.min(1, S.fall + dt * 2.5);
+        sp.vy = (sp.vy || 0) + E.sh * 3 * dt; sp.y = Math.min(E.g - 4, sp.y + sp.vy * dt);
+        sp.ang += (-Math.PI - sp.ang) * Math.min(1, dt * 6);
+      }
+      if (S.endT > 2.2) E.finish({ win: false, title: 'Try Again', verse: '“Fear thou not; for I am with thee…” — Isaiah 41:10', lines: [`The king’s anger boiled over with ${Math.max(0, Math.ceil(this.duration - E.elapsed))}s left.`] });
+    }
+    if (S.phase === 'win') {
+      S.endT += dt; S.sleep = Math.min(1, S.sleep + dt * 0.8);
+      S.zT -= dt;
+      if (S.endT > 0.8 && S.zT <= 0) { S.zT = 0.6; floatText(S.floats, P.head[0] + P.r, P.head[1] - P.r * 1.5, 'z', Math.max(14, E.sh * 0.06), { vx: E.sh * 0.08, vy: -E.sh * 0.12, max: 1.8 }); }
+      if (S.endT > 2.8) E.finish({ win: true, title: 'Victory!', verse: '“…so Saul was refreshed, and was well, and the evil spirit departed from him.” — 1 Samuel 16:23',
+        lines: [`<hi>King Saul stayed ${Math.round((1 - S.peak) * 100)}% calm at his worst moment</hi>`], score: Math.round((1 - S.peak) * 100), bestLabel: `${Math.round((1 - S.peak) * 100)}% calm` });
+    }
+  },
+  render(S) {
+    const d = this.dims(), g = E.g;
+    // palace pillars
+    pen(2, 0.12);
+    [0.06, 0.42, 0.94].forEach(fx => { const x = E.sw * fx; poly([[x - 10, g], [x - 10, g - E.sh * 0.85]]); poly([[x + 10, g], [x + 10, g - E.sh * 0.85]]); poly([[x - 18, g - E.sh * 0.85], [x + 18, g - E.sh * 0.85]]); });
+    const P = this.saul(S, d), h = P.h, tx = d.tx, lw = P.lw;
+    // throne
+    pen(lw * 1.1, 0.8);
+    poly([[tx + h * 0.24, g], [tx + h * 0.24, g - h * 0.95]]); circle(tx + h * 0.24, g - h * 0.99, lw * 1.6, true);
+    poly([[tx - h * 0.12, P.seatY], [tx + h * 0.24, P.seatY]]); poly([[tx - h * 0.12, P.seatY], [tx - h * 0.12, g]]);
+    poly([[tx - h * 0.1, P.seatY - h * 0.16], [tx + h * 0.24, P.seatY - h * 0.16]]); poly([[tx - h * 0.1, P.seatY - h * 0.16], [tx - h * 0.1, P.seatY]]);
+    // spear resting / held
+    const k = S.phase === 'throw' ? 1 : clamp((S.shown - 0.55) / 0.4);
+    const armrest = [tx - h * 0.06, P.seatY - h * 0.16 + (S.shown > 0.3 && S.shown < 0.6 ? Math.abs(Math.sin(E.clock * 14)) * -h * 0.02 : 0)];
+    const sleepHand = [P.hip[0] - h * 0.1, P.hip[1] - h * 0.02];
+    let hand = S.shown < 0.3 ? lerp2(sleepHand, armrest, S.shown / 0.3) : armrest;
+    if (k > 0) hand = lerp2(armrest, [P.sh[0] - P.armL * 0.1, P.sh[1] - P.armL * 0.55], k);
+    if (S.phase === 'throw') {
+      const wind = clamp(S.endT / 0.55);
+      hand = S.endT < 0.55 ? lerp2(hand, [P.sh[0] + P.armL * 0.4, P.sh[1] - P.armL * 0.6], easeOut(wind)) : [P.sh[0] - P.armL * 0.7, P.sh[1] - P.armL * 0.1];
+    }
+    if (!S.spear) {
+      pen(lw * 0.6);
+      let ang, mid;
+      if (k <= 0) { ang = -Math.PI / 2 - 0.08; mid = [tx + h * 0.33, g - h * 0.5]; }
+      else { ang = lerp(-Math.PI / 2, -Math.PI + 0.12, k); if (S.phase === 'throw') ang = -Math.PI + 0.25; mid = hand; }
+      const L = h * 0.95, c = Math.cos(ang), s = Math.sin(ang);
+      const tail = [mid[0] - c * L * 0.45, mid[1] - s * L * 0.45], tip = [mid[0] + c * L * 0.55, mid[1] + s * L * 0.55];
+      poly([tail, tip]); this.spearTip(tip, ang, h);
+    }
+    // Saul body
+    pen(lw);
+    if (P.st > 0.05) { for (const f of [[P.hip[0] - h * 0.12, g], [P.hip[0] + h * 0.1, g]]) { const [kn, ft] = ik(P.hip, f, h * 0.22, h * 0.22, -1); poly([P.hip, kn, ft]); } }
+    else { poly([P.hip, [P.hip[0] - h * 0.22, P.hip[1]], [P.hip[0] - h * 0.24, g]]); poly([P.hip, [P.hip[0] - h * 0.19, P.hip[1] + h * 0.02], [P.hip[0] - h * 0.17, g]]); }
+    poly([P.hip, P.sh]);
+    const [e1, h1] = ik(P.sh, hand, P.armL / 2, P.armL / 2, 1); poly([P.sh, e1, h1]);
+    const backHand = S.shown < 0.3 ? [P.hip[0] - h * 0.04, P.hip[1] - h * 0.04] : [P.sh[0] + P.armL * 0.3, P.sh[1] + P.armL * 0.75];
+    const [e2, h2] = ik(P.sh, backHand, P.armL / 2, P.armL / 2, 1); poly([P.sh, e2, h2]);
+    // head & face (faces left)
+    const [hx, hy] = P.head, r = P.r, a = S.shown;
+    circle(hx, hy, r, false);
+    poly([[hx - r * 0.7, hy - r * 0.75], [hx - r * 0.55, hy - r * 1.45], [hx - r * 0.2, hy - r * 0.95], [hx, hy - r * 1.55], [hx + r * 0.25, hy - r * 0.95], [hx + r * 0.55, hy - r * 1.45], [hx + r * 0.7, hy - r * 0.75]]);
+    const ex = hx - r * 0.45, ey = hy - r * 0.05;
+    pen(lw * 0.5);
+    if (S.sleep > 0.3 || a < 0.12) { ctx.beginPath(); ctx.arc(ex, ey - r * 0.05, r * 0.16, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
+    else circle(ex, ey, lw * 0.45, true);
+    poly([[hx - r * 0.75, hy - r * 0.35 + a * r * 0.22], [hx - r * 0.2, hy - r * 0.4 - a * r * 0.12]]);
+    const curve = (0.45 - a) * r * 0.7;
+    ctx.beginPath(); ctx.moveTo(hx - r * 0.75, hy + r * 0.42); ctx.quadraticCurveTo(hx - r * 0.5, hy + r * 0.42 + curve, hx - r * 0.2, hy + r * 0.45); ctx.stroke();
+    // David
+    const D = harpDavid(d.dX, g, d.dH, { pluck: S.pluck, vib: S.vib, fall: S.fall });
+    S.noteAt = D.notes;
+    if (S.spear) {
+      const sp = S.spear, L = h * 0.95, c = Math.cos(sp.ang), s = Math.sin(sp.ang);
+      pen(lw * 0.6); poly([[sp.x - c * L, sp.y - s * L], [sp.x, sp.y]]); this.spearTip([sp.x, sp.y], sp.ang, h);
+    }
+    drawParticles(S.particles); drawFloats(S.floats);
+  },
+  spearTip(tip, ang, h) {
+    const tl = h * 0.06, tw = h * 0.022;
+    ctx.beginPath(); ctx.moveTo(tip[0] + Math.cos(ang) * tl, tip[1] + Math.sin(ang) * tl);
+    ctx.lineTo(tip[0] + Math.cos(ang + Math.PI / 2) * tw, tip[1] + Math.sin(ang + Math.PI / 2) * tw);
+    ctx.lineTo(tip[0] - Math.cos(ang + Math.PI / 2) * tw, tip[1] - Math.sin(ang + Math.PI / 2) * tw); ctx.closePath(); ctx.fill();
+  }
+};
+
+
+/* =====================================================================
+   SHARED (Lessons 3–6) — item feeds, people, water, extra sounds
+   ===================================================================== */
+// An item = a word / number / verse-word typed as a unit. Mistakes inside it decide its quality.
+const QUALITY = ['Perfect!', 'Good', 'Fair', 'Weak', 'Missed'];
+const credit = m => ZONE_STUN[Math.min(m, 4)];          // 1, .6, .4, .25, 0
+function feedInit(S, gen, sep = ' ') { S.feed = { gen, sep, items: [], flags: [], buf: [], pos: 0, miss: 0, n: 0, perfect: 0, done: 0 }; }
+function feedPick(S) {
+  const F = S.feed;
+  if (!F.buf.length) { const it = F.gen(S, F.n++); F.items.push(it); F.buf = (it.t + F.sep).split(''); }
+  const ch = F.buf.shift(); F.flags.push(F.buf.length === 0); return ch;
+}
+// returns the finished item (with .miss) when its last character is typed, else null
+function feedKey(S, ok) {
+  const F = S.feed;
+  if (!ok) { F.miss++; return null; }
+  F.pos++;
+  if (F.flags.shift()) {
+    const it = F.items.shift(); it.miss = F.miss; F.miss = 0; F.pos = 0; F.done++;
+    if (!it.miss) F.perfect++;
+    return it;
+  }
+  return null;
+}
+function feedLine(S) {
+  const F = S.feed, it = F.items[0]; if (!it) return null;
+  if (it.verse != null) return { text: it.verse, pos: it.off + F.pos, ref: it.ref };
+  return { text: F.items.slice(0, 3).map(i => i.t).join(F.sep), pos: F.pos };
+}
+// split verses into word items that remember their verse for the passage line
+function verseFeed(verses) {
+  const words = [];
+  verses.forEach(v => { let off = 0; v.t.split(' ').forEach(w => { words.push({ t: w, verse: v.t, off, ref: v.ref }); off += w.length + 1; }); });
+  return (S, n) => Object.assign({}, words[n % words.length]);
+}
+const wordFeed = list => (S, n) => ({ t: pickOne(list) });
+const numFeed = (digits, minL, maxL) => () => {
+  const L = minL + Math.floor(Math.random() * (maxL - minL + 1)); let t = '';
+  for (let i = 0; i < L; i++) t += pickOne(digits);
+  if (t.length > 1 && t[0] === '0') t = pickOne(digits.filter(d => d !== '0')) + t.slice(1);
+  return { t };
+};
+function endAfter(S, dt, delay, resFn) { S.endT += dt; if (S.endT > delay) E.finish(resFn()); }
+
+Sound.horn = function (f = 196, dur = 0.9, sour = false) {
+  const ac = this.ensure(); if (!ac) return;
+  const t = ac.currentTime, g = ac.createGain(), lp = ac.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.setValueAtTime(350, t); lp.frequency.linearRampToValueAtTime(1600, t + 0.15);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.08);
+  g.gain.setValueAtTime(0.16, t + dur - 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  lp.connect(g); g.connect(this.master);
+  [1, sour ? 1.07 : 1.004].forEach(m => {
+    const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * m, t);
+    if (sour) o.frequency.linearRampToValueAtTime(f * m * 0.9, t + dur);
+    o.connect(lp); o.start(t); o.stop(t + dur + 0.05);
+  });
+};
+Sound.splash = function () { this.noise(1.3, 0.5, 1400, 120); };
+Sound.knock = function () { this.noise(0.07, 0.45, 2600, 500, 'bandpass'); };
+Sound.blip = function (f) { this.pluck(f, 0.1, 0.3); };
+
+// generic stick person. o: face(±1) walk(phase) handF/handB ([x,y] in arm-lengths, x toward face) bob lean sit lw
+function person(x, g, h, o = {}) {
+  const f = o.face ?? 1, lw = o.lw ?? Math.max(2, h * 0.035), r = h * 0.1, legL = h * 0.46, torso = h * 0.3, armL = h * 0.3;
+  pen(lw, o.alpha ?? 1);
+  const walking = o.walk != null, ph = o.walk || 0, stride = h * 0.12;
+  let hip;
+  if (o.sit) {
+    hip = [x, g - h * 0.2];
+    poly([hip, [x + f * h * 0.2, hip[1]], [x + f * h * 0.22, g]]); poly([hip, [x + f * h * 0.16, hip[1] + h * 0.02], [x + f * h * 0.14, g]]);
+  } else {
+    hip = [x, g - legL * 0.97 + (o.bob || 0)];
+    const feet = walking ? [[x + Math.sin(ph) * stride, g - Math.max(0, Math.cos(ph)) * h * 0.04], [x - Math.sin(ph) * stride, g - Math.max(0, -Math.cos(ph)) * h * 0.04]]
+      : [[x - h * 0.1, g + (o.bob || 0)], [x + h * 0.1, g + (o.bob || 0)]];
+    for (const ft of feet) { const [k, e] = ik(hip, ft, legL / 2, legL / 2, f); poly([hip, k, e]); }
+  }
+  const sh = [hip[0] + f * torso * (o.lean || 0), hip[1] - torso];
+  poly([hip, sh]);
+  const head = [sh[0] + f * r * 0.1, sh[1] - r * 1.35];
+  circle(head[0], head[1], r, false);
+  circle(head[0] + f * r * 0.45, head[1] - r * 0.1, lw * 0.45, true);
+  const sw = walking ? Math.sin(ph) * 0.3 : 0;
+  const hf = o.handF ? [sh[0] + f * o.handF[0] * armL, sh[1] + o.handF[1] * armL] : [sh[0] + f * armL * (0.25 - sw), sh[1] + armL * 0.85];
+  const hb = o.handB ? [sh[0] + f * o.handB[0] * armL, sh[1] + o.handB[1] * armL] : [sh[0] - f * armL * (0.25 - sw), sh[1] + armL * 0.85];
+  const [e1, h1] = ik(sh, hf, armL / 2, armL / 2, -f); poly([sh, e1, h1]);
+  const [e2, h2] = ik(sh, hb, armL / 2, armL / 2, -f); poly([sh, e2, h2]);
+  return { hip, sh, head, hf: h1, hb: h2, r, lw };
+}
+// translucent water body with a wavy surface from x0..x1 at height y
+function water(y, x0 = 0, x1 = E.sw, a = 0.2, amp = 4) {
+  const wave = x => y + Math.sin(x * 0.035 + E.clock * 2.4) * amp + Math.sin(x * 0.011 - E.clock * 1.3) * amp * 0.6;
+  ctx.beginPath(); ctx.moveTo(x0, E.sh + 4);
+  for (let x = x0; x <= x1; x += 8) ctx.lineTo(x, wave(x));
+  ctx.lineTo(x1, wave(x1)); ctx.lineTo(x1, E.sh + 4); ctx.closePath();
+  ctx.fillStyle = `rgba(111,168,255,${a})`; ctx.fill();
+  pen(2, 0.65, '190,215,255'); ctx.beginPath();
+  for (let x = x0; x <= x1; x += 8) x === x0 ? ctx.moveTo(x, wave(x)) : ctx.lineTo(x, wave(x));
+  ctx.stroke();
+}
+function rain(n, a = 0.3) {
+  pen(1.2, a, '200,220,255');
+  for (let i = 0; i < n; i++) {
+    const x = (i * 137.5 + E.clock * 40) % (E.sw + 40) - 20, sp = 0.9 + (i % 5) * 0.1;
+    const y = ((i * 53 + E.clock * E.sh * 1.6 * sp) % (E.sh * 1.1)) - E.sh * 0.05;
+    poly([[x, y], [x - 3, y + E.sh * 0.04]]);
+  }
+}
+function arcs(x, y, r0, n, t, dir = 1, a = 0.6) {   // sound waves
+  for (let i = 0; i < n; i++) {
+    const p = (t + i / n) % 1, r = r0 * (0.3 + p * 1.6);
+    pen(2, a * (1 - p)); ctx.beginPath(); ctx.arc(x, y, r, dir > 0 ? -0.6 : Math.PI - 0.6, dir > 0 ? 0.6 : Math.PI + 0.6); ctx.stroke();
+  }
+}
+function rainbow(a) {
+  if (a <= 0) return;
+  for (let i = 0; i < 4; i++) { pen(3, a * (0.5 - i * 0.1)); ctx.beginPath(); ctx.arc(E.sw * 0.5, E.g + E.sh * 0.2, E.sw * (0.45 - i * 0.03), Math.PI * 1.08, Math.PI * 1.92); ctx.stroke(); }
+}
+
+/* =====================================================================
+   LESSON 3 — BOTTOM ROW (Noah's Ark · Genesis 6–9)
+   ===================================================================== */
+const BOTTOM_ROW = ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/'];
+// ark hull (trapezoid) — keel at yb, deck at yb - h
+function hullPath(x0, x1, yb, h) {
+  const w = x1 - x0;
+  ctx.beginPath(); ctx.moveTo(x0 - w * 0.05, yb - h); ctx.lineTo(x0 + w * 0.07, yb); ctx.lineTo(x1 - w * 0.07, yb); ctx.lineTo(x1 + w * 0.05, yb - h); ctx.closePath();
+}
+function arkHouse(x0, x1, deckY, h, doorOpen = -1) {
+  const w = x1 - x0, hx0 = x0 + w * 0.18, hx1 = x1 - w * 0.18, hh = h * 0.5, lw = Math.max(2.5, h * 0.03);
+  ctx.fillStyle = '#2b2f36'; ctx.fillRect(hx0, deckY - hh, hx1 - hx0, hh);
+  pen(lw); ctx.strokeRect(hx0, deckY - hh, hx1 - hx0, hh);
+  ctx.beginPath(); ctx.moveTo(hx0 - w * 0.04, deckY - hh); ctx.lineTo((hx0 + hx1) / 2, deckY - hh - h * 0.28); ctx.lineTo(hx1 + w * 0.04, deckY - hh); ctx.closePath(); ctx.fillStyle = '#2b2f36'; ctx.fill(); ctx.stroke();
+  pen(lw * 0.7, 0.8);
+  for (let i = 0; i < 3; i++) { const wx = lerp(hx0, hx1, (i + 0.5) / 3); ctx.strokeRect(wx - w * 0.025, deckY - hh * 0.75, w * 0.05, hh * 0.3); }
+}
+// stick-figure animals
+const SPECIES = [
+  { n: 'sheep', w: .5, h: .32, leg: .22, neck: .08, fluffy: 1 }, { n: 'giraffe', w: .45, h: .24, leg: .42, neck: .62 },
+  { n: 'elephant', w: .78, h: .46, leg: .3, neck: 0, trunk: 1 }, { n: 'lion', w: .55, h: .28, leg: .27, neck: .08, mane: 1 },
+  { n: 'camel', w: .6, h: .26, leg: .45, neck: .32, hump: 1 }, { n: 'rabbit', w: .28, h: .2, leg: .08, neck: 0, ears: 1 },
+  { n: 'horse', w: .6, h: .26, leg: .4, neck: .28 }, { n: 'dove', w: .22, h: .14, leg: .06, neck: 0, bird: 1 }
+];
+function animal(x, g, s, sp, face, walk) {
+  const A = SPECIES[sp], bw = A.w * s, bh = A.h * s, leg = A.leg * s, lw = Math.max(1.8, s * 0.035);
+  const bob = Math.abs(Math.sin(walk)) * s * 0.015, by = g - leg - bh * 0.45 - bob;
+  pen(lw);
+  [-0.32, -0.14, 0.14, 0.32].forEach((lx, i) => { const sw = Math.sin(walk + (i % 2) * Math.PI) * s * 0.05; poly([[x + lx * bw, by + bh * 0.3], [x + lx * bw + sw, g]]); });
+  ctx.beginPath(); ctx.ellipse(x, by, bw / 2, bh / 2, 0, 0, TAU);
+  ctx.fillStyle = A.fluffy ? 'rgba(255,255,255,0.9)' : '#2b2f36'; ctx.fill(); ctx.stroke();
+  if (A.hump) { ctx.beginPath(); ctx.arc(x - face * bw * 0.05, by - bh * 0.4, bw * 0.18, Math.PI, TAU); ctx.fillStyle = '#2b2f36'; ctx.fill(); ctx.stroke(); }
+  const nb = [x + face * bw * 0.38, by - bh * 0.15];
+  const hr = s * (A.trunk ? 0.14 : A.bird ? 0.06 : 0.085);
+  const hd = A.neck ? [nb[0] + face * s * 0.08, nb[1] - A.neck * s] : [x + face * (bw / 2 + hr * 0.6), by - bh * 0.25];
+  if (A.neck) { pen(lw * 1.4); poly([nb, hd]); pen(lw); }
+  if (A.bird) { ctx.beginPath(); ctx.moveTo(x - face * bw * 0.1, by - bh * 0.2); ctx.lineTo(x - face * bw * 0.45, by - bh * (1.2 + Math.sin(E.clock * 12) * 0.6)); ctx.stroke(); }
+  ctx.beginPath(); ctx.arc(hd[0], hd[1], hr, 0, TAU); ctx.fillStyle = '#2b2f36'; ctx.fill(); ctx.stroke();
+  circle(hd[0] + face * hr * 0.4, hd[1] - hr * 0.15, Math.max(1, lw * 0.45), true);
+  if (A.trunk) { ctx.beginPath(); ctx.moveTo(hd[0] + face * hr * 0.7, hd[1]); ctx.quadraticCurveTo(hd[0] + face * hr * 1.3, hd[1] + hr * 1.5, hd[0] + face * hr * 0.9, hd[1] + hr * 2.4); ctx.stroke(); }
+  if (A.mane) { pen(lw, 0.7); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; poly([[hd[0] + Math.cos(a) * hr, hd[1] + Math.sin(a) * hr], [hd[0] + Math.cos(a) * hr * 1.7, hd[1] + Math.sin(a) * hr * 1.7]]); } pen(lw); }
+  if (A.ears) { poly([[hd[0] - hr * 0.3, hd[1] - hr], [hd[0] - hr * 0.5, hd[1] - hr * 3]]); poly([[hd[0] + hr * 0.3, hd[1] - hr], [hd[0] + hr * 0.2, hd[1] - hr * 3]]); }
+  if (A.bird) { pen(lw); poly([[hd[0] + face * hr, hd[1]], [hd[0] + face * hr * 2, hd[1] + hr * 0.3]]); }
+}
+function noahHammer(x, g, h, swing, face = 1) {
+  const up = Math.sin(clamp(swing) * Math.PI);
+  const P = person(x, g, h, { face, handF: [lerp(0.75, 0.2, up), lerp(-0.1, -0.95, up)] });
+  const hd = P.hf, a = lerp(-0.2, -1.6, up) * face;
+  pen(P.lw); const tip = [hd[0] + Math.cos(a) * h * 0.18 * face, hd[1] + Math.sin(a) * h * 0.18];
+  poly([hd, tip]); pen(P.lw * 2.2); poly([[tip[0] - h * 0.03, tip[1] - h * 0.03 * face], [tip[0] + h * 0.03, tip[1] + h * 0.03 * face]]);
+  // beard
+  pen(P.lw * 0.6, 0.8); poly([[P.head[0] + face * P.r * 0.3, P.head[1] + P.r * 0.8], [P.head[0] + face * P.r * 0.2, P.head[1] + P.r * 1.5], [P.head[0] - face * P.r * 0.3, P.head[1] + P.r * 0.8]]);
+  return P;
+}
+
+/* ---------------------------------------------------------------------
+   L3 · M1 — SEAL THE ARK (left hand, ACCURACY → sound planks)
+   --------------------------------------------------------------------- */
+const SealArk = {
+  id: 'L3M1', title: 'Seal the Ark', keys: ['z', 'x', 'c', 'v', 'b'], duration: 55, PER: 4, ROWS: 3, COLS: 4, MAX_LEAKS: 2,
+  hint: 'Left hand: reach down from A S D F · 4 clean letters = a sealed plank',
+  init(S) { Object.assign(S, { planks: [], charge: 0, missWin: 0, hammer: 0, phase: 'build', endT: 0, flood: 0, dripT: 0 }); },
+  get N() { return this.ROWS * this.COLS; },
+  hull() { const x0 = E.sw * 0.4, x1 = E.sw * 0.93, h = E.sh * 0.42; return { x0, x1, h, yb: E.g }; },
+  slot(i) {
+    const H = this.hull(), r = Math.floor(i / this.COLS), c = i % this.COLS, w = (H.x1 - H.x0) * 0.86, ph = H.h * 0.86 / this.ROWS;
+    const x0 = H.x0 + (H.x1 - H.x0) * 0.07 - (r * 0.012) * (H.x1 - H.x0);
+    const ww = w + r * 0.024 * (H.x1 - H.x0);
+    return { x: x0 + c * ww / this.COLS, y: H.yb - (r + 1) * ph - H.h * 0.04, w: ww / this.COLS - 4, h: ph - 4 };
+  },
+  onKey(S, ok) {
+    if (S.phase !== 'build') return;
+    if (!ok) { S.missWin++; return; }
+    S.charge++; S.hammer = 1; Sound.knock();
+    if (S.charge >= this.PER) {
+      const q = S.missWin, b = this.slot(S.planks.length);
+      S.planks.push({ q, t: 0 }); S.charge = 0; S.missWin = 0;
+      floatText(S.floats, b.x + b.w / 2, b.y - E.sh * 0.04, q === 0 ? 'Sealed!' : q === 1 ? 'Sealed' : 'Leaky!', Math.max(13, E.sh * 0.055));
+      if (q < 2) burst(S.particles, b.x + b.w / 2, b.y + b.h / 2, 5, 'spark', E.sh * 0.4, E.sh * 0.018);
+      if (S.planks.length >= this.N) { S.phase = 'test'; S.endT = 0; E.end(); }
+    }
+  },
+  onTimeUp(S) { S.phase = 'test'; S.endT = 0; },
+  update(S, dt) {
+    S.hammer = Math.max(0, S.hammer - dt * 5);
+    S.planks.forEach(p => p.t += dt);
+    const leaky = i => i >= S.planks.length || S.planks[i].q >= 2;
+    if (S.phase === 'test') S.flood = Math.min(1, S.flood + dt * 0.6);
+    S.dripT -= dt;
+    if (S.dripT <= 0 && (S.phase === 'test' || S.planks.some(p => p.q >= 2))) {
+      S.dripT = S.phase === 'test' ? 0.06 : 0.35;
+      for (let i = 0; i < this.N; i++) if (leaky(i) && (i < S.planks.length || S.phase === 'test') && Math.random() < 0.5) {
+        const b = this.slot(i); burst(S.particles, b.x + b.w * rand(0.3, 0.7), b.y + b.h * 0.6, 1, 'drop', E.sh * 0.05, E.sh * 0.008);
+      }
+    }
+    if (S.phase === 'test') {
+      const leaks = [...Array(this.N).keys()].filter(leaky).length, sealed = this.N - leaks, win = leaks <= this.MAX_LEAKS;
+      endAfter(S, dt, 2.6, () => ({ win, title: win ? 'Watertight!' : 'Try Again',
+        verse: win ? '“…and shalt pitch it within and without with pitch.” — Genesis 6:14' : '“Thus did Noah; according to all that God commanded him, so did he.” — Genesis 6:22',
+        lines: [`<hi>${sealed} of ${this.N} planks sealed</hi>`, `Goal: no more than ${this.MAX_LEAKS} leaks`], score: sealed, bestLabel: `${sealed}/${this.N} sealed` }));
+    }
+  },
+  render(S) {
+    hills();
+    const H = this.hull();
+    if (S.phase === 'test') rain(60, 0.3 * S.flood);
+    ctx.fillStyle = '#2b2f36'; hullPath(H.x0, H.x1, H.yb, H.h); ctx.fill();
+    for (let i = 0; i < this.N; i++) {
+      const b = this.slot(i), p = S.planks[i];
+      if (!p) { ctx.setLineDash([4, 5]); pen(1.5, 0.25); ctx.strokeRect(b.x, b.y, b.w, b.h); ctx.setLineDash([]); continue; }
+      const drop = easeOut(clamp(p.t * 6)), y = b.y - (1 - drop) * E.sh * 0.06;
+      ctx.fillStyle = p.q === 0 ? 'rgba(255,255,255,0.85)' : p.q === 1 ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.28)';
+      if (p.q >= 2) { ctx.fillRect(b.x, y, b.w * 0.42, b.h); ctx.fillRect(b.x + b.w * 0.56, y, b.w * 0.44, b.h); }
+      else { ctx.save(); ctx.translate(b.x + b.w / 2, y + b.h / 2); ctx.rotate(p.q === 1 ? 0.04 : 0); ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); ctx.restore(); }
+      pen(1.2, 0.5, '30,34,40'); poly([[b.x + b.w * 0.33, y + 3], [b.x + b.w * 0.33, y + b.h - 3]]); poly([[b.x + b.w * 0.66, y + 3], [b.x + b.w * 0.66, y + b.h - 3]]);
+    }
+    pen(Math.max(3, H.h * 0.025)); hullPath(H.x0, H.x1, H.yb, H.h); ctx.stroke();
+    if (S.flood > 0) water(E.g - E.sh * 0.12 * S.flood, 0, E.sw, 0.18);
+    const next = S.planks.length < this.N ? this.slot(S.planks.length) : null;
+    const nx = E.sw * 0.27;
+    noahHammer(nx, E.g, E.sh * 0.42, S.hammer);
+    if (next && S.phase === 'build') { pen(2, 0.35 + 0.25 * Math.sin(E.clock * 6)); ctx.strokeRect(next.x - 2, next.y - 2, next.w + 4, next.h + 4); }
+    drawParticles(S.particles); drawFloats(S.floats);
+    if (S.phase === 'build') drawVolleyPips(nx, E.g - E.sh * 0.5, E.sh * 0.012, S.charge, S.missWin, this.PER);
+    text(`${S.planks.length} / ${this.N} planks`, E.sw * 0.665, E.sh * 0.1, Math.max(12, E.sh * 0.045), 0.6, 600);
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L3 · M2 — TWO BY TWO (right hand, SPEED → pairs aboard)
+   --------------------------------------------------------------------- */
+const TwoByTwo = {
+  id: 'L3M2', title: 'Two by Two', keys: ['n', 'm', ',', '.', '/'], duration: 35, PER: 4, GOAL: 10, PAIRS: 16,
+  hint: 'Right hand: reach down from J K L ; · every 4 letters a pair boards',
+  init(S) {
+    Object.assign(S, { prog: 0, startle: 0, phase: 'play', endT: 0, door: 0, wave: 0 });
+    S.pairs = [...Array(this.PAIRS).keys()].map(i => ({ sp: i % SPECIES.length, x: null, walk: rand(0, 6), gone: 0 }));
+  },
+  geo() { return { x0: E.sw * 0.03, x1: E.sw * 0.42, h: E.sh * 0.34, doorX: E.sw * 0.4, rampX: E.sw * 0.56 }; },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    if (ok) {
+      S.prog++;
+      if (S.prog % this.PER === 0) { Sound.blip(NOTES[(S.prog / this.PER) % 10]); if (S.prog / this.PER >= this.PAIRS) { S.phase = 'end'; S.endT = 0; E.end(); } }
+    }
+    else S.startle = 1;
+  },
+  onTimeUp(S) { S.phase = 'end'; S.endT = 0; },
+  update(S, dt) {
+    const G = this.geo(), aboard = Math.min(this.PAIRS, Math.floor(S.prog / this.PER)), frac = (S.prog % this.PER) / this.PER, sp = E.sw * 0.12;
+    S.startle = Math.max(0, S.startle - dt * 3); S.wave += dt;
+    S.pairs.forEach((p, i) => {
+      const k = i - aboard;
+      let tx = k < 0 ? G.doorX - E.sw * 0.04 : k === 0 ? lerp(G.rampX + sp * 0.3, G.doorX, frac) : G.rampX + sp * 0.3 + k * sp;
+      if (p.x == null) p.x = tx + E.sw * 0.3;
+      const dx = tx - p.x, v = Math.sign(dx) * Math.min(Math.abs(dx), E.sw * 0.5 * dt);
+      p.x += v; if (Math.abs(v) > 0.1) p.walk += dt * 10;
+      if (k < 0 && Math.abs(dx) < 4) p.gone = Math.min(1, p.gone + dt * 3);
+    });
+    if (S.phase === 'end') {
+      S.door = Math.min(1, S.door + dt * 1.2);
+      const win = aboard >= this.GOAL;
+      endAfter(S, dt, 2.4, () => ({ win, title: win ? 'All Aboard!' : 'Try Again',
+        verse: win ? '“There went in two and two unto Noah into the ark…” — Genesis 7:9' : '“…and the LORD shut him in.” — Genesis 7:16',
+        lines: [`<hi>${aboard} pairs aboard</hi>  ·  Goal: ${this.GOAL}`], score: aboard, bestLabel: `${aboard} pairs` }));
+    }
+  },
+  render(S) {
+    hills();
+    const G = this.geo(), g = E.g, aboard = Math.min(this.PAIRS, Math.floor(S.prog / this.PER));
+    if (S.phase === 'end') rain(70, 0.35 * Math.min(1, S.endT));
+    ctx.fillStyle = '#2b2f36'; hullPath(G.x0, G.x1, g, G.h); ctx.fill();
+    pen(Math.max(3, G.h * 0.03)); hullPath(G.x0, G.x1, g, G.h); ctx.stroke();
+    pen(1.5, 0.3); for (let i = 1; i < 4; i++) poly([[G.x0 + (G.x1 - G.x0) * 0.04, g - G.h * i / 4], [G.x1 - (G.x1 - G.x0) * 0.02, g - G.h * i / 4]]);
+    arkHouse(G.x0, G.x1, g - G.h, G.h);
+    // door + ramp
+    const dw = E.sw * 0.05, dh = G.h * 0.55, dy = g - G.h * 0.35;
+    ctx.fillStyle = '#16191e'; ctx.fillRect(G.doorX - dw, dy - dh, dw, dh);
+    pen(2.5); ctx.strokeRect(G.doorX - dw, dy - dh, dw, dh);
+    poly([[G.doorX, dy], [G.rampX, g]]);
+    if (S.door > 0) { ctx.save(); ctx.translate(G.doorX, dy); ctx.rotate(-S.door * 0.82); ctx.fillStyle = '#2b2f36'; ctx.fillRect(0, -2, Math.hypot(G.rampX - G.doorX, g - dy), 6); pen(2.5); ctx.strokeRect(0, -2, Math.hypot(G.rampX - G.doorX, g - dy), 6); ctx.restore(); }
+    // animals (back to front)
+    const s = E.sh * 0.32;
+    for (let i = S.pairs.length - 1; i >= 0; i--) {
+      const p = S.pairs[i]; if (p.gone >= 1 || p.x > E.sw + s) continue;
+      const onRamp = p.x < G.rampX, yy = onRamp ? lerp(dy, g, (p.x - G.doorX) / (G.rampX - G.doorX)) : g;
+      const hop = i === aboard ? S.startle * E.sh * 0.03 * Math.abs(Math.sin(E.clock * 20)) : 0;
+      ctx.save(); ctx.globalAlpha = 1 - p.gone;
+      animal(p.x + s * 0.18, yy - hop - s * 0.04, s * 0.85, p.sp, -1, p.walk + 1);
+      animal(p.x, yy - hop, s, p.sp, -1, p.walk);
+      ctx.restore();
+    }
+    person(E.sw * 0.5, g, E.sh * 0.4, { face: -1, handF: [0.3, -0.9 + Math.sin(S.wave * 6) * 0.15] });
+    drawParticles(S.particles);
+    text(`${aboard} pairs aboard`, E.sw * 0.75, E.sh * 0.1, Math.max(13, E.sh * 0.05), 0.75, 700);
+    for (let i = 0; i < this.GOAL; i++) { pen(1.5, i < aboard ? 0.9 : 0.25); circle(E.sw * 0.75 + (i - (this.GOAL - 1) / 2) * E.sh * 0.04, E.sh * 0.17, E.sh * 0.012, i < aboard); }
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L3 · M3 — THE FLOOD RISES (both hands, SPEED + ACCURACY)
+   Speed = how often a hull section goes on (every 5 letters).
+   Accuracy = how solid that section is. Keep the hull above the water.
+   --------------------------------------------------------------------- */
+const FloodRises = {
+  id: 'L3M3', title: 'The Flood Rises', keys: BOTTOM_ROW, duration: 45, PER: 5, NEED: 4, BASE: 0.15, CUBITS: 15,
+  hint: 'Both hands · build the hull faster than the water rises',
+  pick() { return Math.random() < 0.8 ? pickOne(BOTTOM_ROW) : pickOne(HOME_KEYS); },
+  init(S) { Object.assign(S, { credits: 0, shown: 0, charge: 0, missWin: 0, hammer: 0, phase: 'play', endT: 0, lift: 0, spare: 0, sections: [] }); },
+  hull() { return { x0: E.sw * 0.3, x1: E.sw * 0.86, h: E.sh * 0.5, yb: E.g }; },
+  level(S) { return clamp(E.elapsed / this.duration); },                        // water as fraction of hull height
+  top(S) { return this.BASE + (1 - this.BASE) * clamp(S.shown / this.NEED); },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    if (!ok) { S.missWin++; return; }
+    S.charge++; S.hammer = 1; Sound.knock();
+    if (S.charge >= this.PER) {
+      const q = Math.min(S.missWin, 4), c = credit(q), H = this.hull();
+      S.credits += c; S.sections.push(q); S.charge = 0; S.missWin = 0;
+      floatText(S.floats, (H.x0 + H.x1) / 2, H.yb - H.h * this.top(S) - E.sh * 0.06, ['Solid!', 'Good', 'Patchy', 'Weak', 'Fell off!'][q], Math.max(14, E.sh * 0.06));
+      if (S.credits >= this.NEED) { S.phase = 'win'; S.endT = 0; S.spare = Math.round(this.CUBITS * (1 - this.level(S))); E.end(); Sound.horn(294, 1.2); }
+    }
+  },
+  onTimeUp(S) { if (S.phase === 'play') { S.phase = 'lose'; S.endT = 0; } },
+  update(S, dt) {
+    S.hammer = Math.max(0, S.hammer - dt * 5);
+    S.shown += (S.credits - S.shown) * Math.min(1, dt * 6);
+    if (S.phase === 'play' && E.state === 'playing' && this.level(S) >= this.top(S)) { S.phase = 'lose'; S.endT = 0; E.end(); Sound.splash(); }
+    const tally = () => { const c = [0, 0, 0, 0, 0]; S.sections.forEach(q => c[q]++); return `Solid ${c[0]} · Good ${c[1]} · Patchy ${c[2]} · Weak ${c[3]} · Fell off ${c[4]}`; };
+    if (S.phase === 'win') {
+      S.lift = Math.min(1, S.lift + dt * 0.5);
+      endAfter(S, dt, 3, () => ({ win: true, title: 'Afloat!', verse: '“I do set my bow in the cloud…” — Genesis 9:13',
+        lines: [`<hi>Ark finished with ${S.spare} cubits of water to spare</hi>`, tally()], score: S.spare, bestLabel: `${S.spare} cubits to spare` }));
+    }
+    if (S.phase === 'lose') endAfter(S, dt, 2, () => ({ win: false, title: 'Try Again', verse: '“By faith Noah… prepared an ark to the saving of his house…” — Hebrews 11:7',
+      lines: [`The water rose over the hull at ${Math.round(clamp(S.shown / this.NEED) * 100)}% built`, tally(), 'Tip: clean volleys of 5 build solid sections.'] }));
+  },
+  render(S) {
+    const H = this.hull(), lvl = S.phase === 'win' ? Math.max(this.level(S), S.lift * 0.6) : this.level(S);
+    rain(Math.round(30 + 60 * lvl), 0.28);
+    hills();
+    const lift = S.phase === 'win' ? Math.max(0, lvl * H.h * 0.9 - H.h * 0.32) + Math.sin(E.clock * 2) * E.sh * 0.01 * S.lift : 0;
+    const yb = H.yb - lift, topY = yb - H.h * this.top(S);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, topY, E.sw, E.sh); ctx.clip();
+    ctx.fillStyle = '#2b2f36'; hullPath(H.x0, H.x1, yb, H.h); ctx.fill();
+    pen(1.5, 0.35); for (let i = 1; i < 10; i++) { const y = yb - H.h * i / 10; poly([[H.x0, y], [H.x1, y]]); }
+    pen(Math.max(3, H.h * 0.025)); hullPath(H.x0, H.x1, yb, H.h); ctx.stroke();
+    ctx.restore();
+    pen(Math.max(3, H.h * 0.025)); poly([[H.x0 - (H.x1 - H.x0) * 0.05 * this.top(S), topY], [H.x1 + (H.x1 - H.x0) * 0.05 * this.top(S), topY]]);
+    if (S.phase === 'win') arkHouse(H.x0, H.x1, topY, H.h * 0.7);
+    // Noah on top of the hull
+    const nx = H.x0 + (H.x1 - H.x0) * 0.22;
+    if (S.phase !== 'win') noahHammer(nx, topY, E.sh * 0.3, S.hammer);
+    else person(nx + E.sw * 0.1, topY - H.h * 0.35 + E.sh * 0.0, E.sh * 0.22, { handF: [0.3, -0.9], handB: [0.3, -0.9] });
+    water(E.g - H.h * lvl * 0.98, 0, E.sw, 0.22, 4 + lvl * 4);
+    if (S.phase === 'lose') { ctx.save(); hullPath(H.x0, H.x1, yb, H.h); ctx.clip(); water(E.g - H.h * this.top(S) * Math.min(1, S.endT), 0, E.sw, 0.35); ctx.restore(); }
+    // cubit gauge (left)
+    const gx = E.sw * 0.08, fs = Math.max(9, E.sh * 0.036);
+    pen(2, 0.35); poly([[gx, E.g], [gx, E.g - H.h]]);
+    for (let c = 0; c <= this.CUBITS; c += 5) { const y = E.g - H.h * c / this.CUBITS; poly([[gx - 6, y], [gx + 6, y]]); text(String(c), gx - 20, y, fs, 0.4, 600); }
+    text('cubits', gx, E.g - H.h - E.sh * 0.05, fs, 0.4, 600);
+    rainbow(S.phase === 'win' ? clamp(S.endT - 1) : 0);
+    drawParticles(S.particles); drawFloats(S.floats);
+    if (S.phase === 'play') drawVolleyPips(nx, topY - E.sh * 0.38, E.sh * 0.012, S.charge, S.missWin);
+  }
+};
+
+/* =====================================================================
+   LESSON 4 — SHIFT & PUNCTUATION (Walls of Jericho · Joshua 6)
+   ===================================================================== */
+// Jericho wall: x0..x1, height h, crack 0..1. Returns nothing.
+function jerichoWall(x0, x1, h, crack = 0, shake = 0) {
+  const g = E.g, w = x1 - x0, lw = Math.max(2, h * 0.02), sx = shake ? Math.sin(E.clock * 60) * shake : 0;
+  ctx.save(); ctx.translate(sx, 0);
+  const tw = w * 0.16, th = h * 1.25;
+  const block = (x, y, ww, hh) => { ctx.fillStyle = '#2b2f36'; ctx.fillRect(x, y, ww, hh); pen(lw); ctx.strokeRect(x, y, ww, hh);
+    const n = Math.floor(ww / (hh * 0.11)); for (let i = 0; i < n; i += 2) ctx.strokeRect(x + i * ww / n, y - hh * 0.07, ww / n, hh * 0.07); };
+  block(x0 + tw, g - h, w - 2 * tw, h); block(x0, g - th, tw, th); block(x1 - tw, g - th, tw, th);
+  pen(1, 0.18);
+  for (let r = 1; r < 8; r++) { const y = g - h * r / 8; poly([[x0 + tw, y], [x1 - tw, y]]); for (let c = 0; c < 9; c++) { const x = x0 + tw + (w - 2 * tw) * (c + (r % 2) * 0.5) / 9; poly([[x, y], [x, y + h / 8]]); } }
+  pen(lw, 0.8); [x0 + tw * 0.5, x1 - tw * 0.5].forEach(x => { ctx.beginPath(); ctx.arc(x, g - th * 0.7, tw * 0.15, Math.PI, TAU); ctx.lineTo(x + tw * 0.15, g - th * 0.55); ctx.lineTo(x - tw * 0.15, g - th * 0.55); ctx.closePath(); ctx.stroke(); });
+  // gate
+  const gx = (x0 + x1) / 2, gw = w * 0.1;
+  ctx.beginPath(); ctx.moveTo(gx - gw, g); ctx.lineTo(gx - gw, g - h * 0.45); ctx.arc(gx, g - h * 0.45, gw, Math.PI, TAU); ctx.lineTo(gx + gw, g); ctx.fillStyle = '#16191e'; ctx.fill(); pen(lw); ctx.stroke();
+  // cracks (deterministic zig-zags that grow with `crack`)
+  if (crack > 0) {
+    pen(lw * 1.2, 0.9);
+    const seeds = [0.22, 0.38, 0.62, 0.78, 0.3, 0.7, 0.5];
+    seeds.forEach((s, i) => {
+      const k = clamp(crack * seeds.length - i); if (k <= 0) return;
+      let x = x0 + tw + (w - 2 * tw) * s, y = g - h * (0.95 - (i % 3) * 0.12);
+      ctx.beginPath(); ctx.moveTo(x, y);
+      const steps = Math.ceil(6 * k);
+      for (let j = 0; j < steps; j++) { x += ((j + i) % 2 ? 1 : -1) * w * 0.025; y += h * 0.13; ctx.lineTo(x, Math.min(y, g)); }
+      ctx.stroke();
+    });
+  }
+  ctx.restore();
+}
+function collapseWall(S, x0, x1, h) {
+  const g = E.g, n = 70;
+  for (let i = 0; i < n; i++) {
+    const s = h * rand(0.05, 0.09);
+    S.particles.push({ x: rand(x0, x1), y: g - rand(0, h * 1.2), vx: rand(-60, 60), vy: rand(-80, 20), life: 0, max: 6, kind: 'brick', size: s, rot: rand(0, 3), vr: rand(-4, 4) });
+  }
+  burst(S.particles, (x0 + x1) / 2, g, 30, 'dust', h * 1.5, h * 0.06);
+  E.shake = 18; Sound.boom();
+}
+// priest with a ram's horn; blow 0..1
+function priest(x, g, h, blow = 0, face = 1, walk) {
+  const P = person(x, g, h, { face, walk, handF: [0.55 + blow * 0.1, -0.45 - blow * 0.25], handB: [0.35, -0.35 - blow * 0.2] });
+  const m = [P.head[0] + face * P.r * 0.9, P.head[1] + P.r * 0.35], end = [m[0] + face * h * 0.3, m[1] - h * (0.12 + blow * 0.08)];
+  pen(P.lw * 1.2); ctx.beginPath(); ctx.moveTo(m[0], m[1]); ctx.quadraticCurveTo(m[0] + face * h * 0.18, m[1] + h * 0.06, end[0], end[1]); ctx.stroke();
+  pen(P.lw); circle(end[0], end[1], h * 0.03, false);
+  if (blow > 0) arcs(end[0], end[1], h * 0.2, 3, E.clock * 1.5, face, 0.6 * blow);
+  return end;
+}
+const JOSHUA_VERSES = [
+  { t: 'Shout; for the LORD hath given you the city.', ref: 'Joshua 6:16' },
+  { t: 'So the people shouted when the priests blew with the trumpets.', ref: 'Joshua 6:20' },
+  { t: 'See, I have given into thine hand Jericho.', ref: 'Joshua 6:2' },
+  { t: 'So the LORD was with Joshua.', ref: 'Joshua 6:27' },
+  { t: 'And the wall fell down flat.', ref: 'Joshua 6:20' }
+];
+
+/* ---------------------------------------------------------------------
+   L4 · M1 — SOUND THE TRUMPETS (ACCURACY → clean blasts)
+   --------------------------------------------------------------------- */
+const SoundTrumpets = {
+  id: 'L4M1', title: 'Sound the Trumpets', duration: 120, caseSensitive: true, ITEMS: 10, NEED: 7,
+  WORDS: ['Joshua', 'Jericho.', 'Shout!', 'Israel,', 'Rahab', 'Seven', 'Priests,', 'Trumpets!', 'The LORD', 'Ark.', 'Walls?', 'Arise!', 'Amen.', 'Selah.'],
+  hint: 'Hold Shift with the opposite pinky for capitals · a clean word = a long blast',
+  pick(S) { return feedPick(S); },
+  init(S) { feedInit(S, wordFeed(this.WORDS)); Object.assign(S, { blown: 0, blowT: Array(7).fill(0), tries: 0, phase: 'play', endT: 0, shake: 0 }); },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    const it = feedKey(S, ok); if (!it) return;
+    S.tries++;
+    const px = this.px(Math.min(S.blown, 6));
+    if (!it.miss && S.blown < 7) { S.blowT[S.blown] = 1.6; S.blown++; S.shake = 0.6; Sound.horn([196, 220, 247, 262, 294, 330, 392][S.blown - 1]); floatText(S.floats, px, E.g - E.sh * 0.55, 'Clean blast!', Math.max(14, E.sh * 0.055)); }
+    else if (!it.miss) { Sound.horn(392); }
+    else { Sound.horn(180, 0.6, true); floatText(S.floats, px, E.g - E.sh * 0.55, 'Sour note', Math.max(14, E.sh * 0.055)); }
+    if (S.tries >= this.ITEMS || S.blown >= 7) { S.phase = 'end'; S.endT = 0; E.end(); }
+  },
+  onTimeUp(S) { S.phase = 'end'; S.endT = 0; },
+  px(i) { return E.sw * (0.06 + i * 0.085); },
+  update(S, dt) {
+    S.line = S.phase === 'play' ? feedLine(S) : null;
+    S.blowT = S.blowT.map(t => Math.max(0, t - dt)); S.shake = Math.max(0, S.shake - dt);
+    if (S.phase === 'end') {
+      const p = S.feed.perfect, win = S.blown >= this.NEED;
+      endAfter(S, dt, 2, () => ({ win, title: win ? 'Seven Trumpets!' : 'Try Again',
+        verse: win ? '“…seven priests bearing seven trumpets of rams’ horns before the ark of the LORD…” — Joshua 6:8' : '“Be strong and of a good courage…” — Joshua 1:9',
+        lines: [`<hi>${S.blown} of 7 priests sounded a clean blast</hi>`, `Clean words: ${p} of ${S.tries}`], score: S.blown * 100 - S.tries, bestLabel: `${S.blown}/7 in ${S.tries} words` }));
+    }
+  },
+  render(S) {
+    hills();
+    jerichoWall(E.sw * 0.68, E.sw * 0.99, E.sh * 0.5, 0, S.shake * 2);
+    for (let i = 0; i < 7; i++) {
+      const done = i < S.blown, b = S.blowT[i] > 0 ? clamp(S.blowT[i]) : 0;
+      ctx.save(); ctx.globalAlpha = done ? 1 : 0.4; priest(this.px(i), E.g, E.sh * 0.42, b); ctx.restore();
+      if (done) { pen(1, 0.9); star(this.px(i), E.g - E.sh * 0.5, E.sh * 0.018); }
+    }
+    drawParticles(S.particles); drawFloats(S.floats);
+    text(`Word ${Math.min(S.tries + 1, this.ITEMS)} of ${this.ITEMS}`, E.sw * 0.3, E.sh * 0.1, Math.max(12, E.sh * 0.045), 0.55, 600);
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L4 · M2 — MARCH AROUND THE CITY (SPEED → laps)
+   --------------------------------------------------------------------- */
+const MarchCity = {
+  id: 'L4M2', title: 'March Around the City', duration: 55, caseSensitive: true, LAP: 9, LAPS: 7,
+  WORDS: ['Joshua', 'Israel', 'Jericho', 'Rahab', 'March', 'Seven', 'Shout', 'Priests', 'Gates', 'Ark', 'Trumpets', 'Day', 'LORD', 'City'],
+  hint: 'Capital names · every correct letter is a step',
+  pick(S) { return feedPick(S); },
+  init(S) { feedInit(S, wordFeed(this.WORDS)); Object.assign(S, { prog: 0, shown: 0, stumble: 0, phase: 'play', endT: 0, spare: 0 }); },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    feedKey(S, ok);
+    if (!ok) { S.stumble = 1; return; }
+    S.prog++;
+    if (S.prog % this.LAP === 0) {
+      const lap = S.prog / this.LAP; Sound.horn(196 + lap * 20, 0.5);
+      floatText(S.floats, E.sw * 0.5, E.sh * 0.25, lap >= this.LAPS ? 'Seventh time!' : `Lap ${lap}`, Math.max(16, E.sh * 0.07));
+      if (lap >= this.LAPS) { S.phase = 'win'; S.endT = 0; S.spare = Math.max(0, Math.round(this.duration - E.elapsed)); E.end(); }
+    }
+  },
+  onTimeUp(S) { S.phase = 'lose'; S.endT = 0; },
+  update(S, dt) {
+    S.line = S.phase === 'play' ? feedLine(S) : null;
+    S.shown += (S.prog - S.shown) * Math.min(1, dt * 5);
+    S.stumble = Math.max(0, S.stumble - dt * 3);
+    const laps = Math.floor(S.prog / this.LAP);
+    if (S.phase === 'win') endAfter(S, dt, 2.4, () => ({ win: true, title: 'Seven Times Around!', verse: '“…they rose early about the dawning of the day, and compassed the city after the same manner seven times…” — Joshua 6:15',
+      lines: [`<hi>Finished with ${S.spare}s to spare</hi>`], score: S.spare, bestLabel: `${S.spare}s to spare` }));
+    if (S.phase === 'lose') endAfter(S, dt, 1.6, () => ({ win: false, title: 'Try Again', verse: '“…ye shall compass the city seven times…” — Joshua 6:4', lines: [`Laps: ${laps} of ${this.LAPS}`] }));
+  },
+  render(S) {
+    hills();
+    jerichoWall(E.sw * 0.25, E.sw * 0.75, E.sh * 0.38);
+    // marchers loop across the foreground
+    const lapF = S.shown / this.LAP, span = E.sw * 1.4, base = (lapF % 1) * span - E.sw * 0.2, walk = S.shown * 1.4;
+    const col = ['soldier', 'soldier', 'priest', 'priest', 'priest', 'ark', 'priest', 'priest', 'soldier'];
+    const h = E.sh * 0.34, g = E.g + 0;
+    col.forEach((kind, i) => {
+      let x = base - i * E.sw * 0.08; while (x < -E.sw * 0.2) x += span;
+      if (x > E.sw + 40) return;
+      const st = S.stumble * Math.sin(E.clock * 30) * 2;
+      if (kind === 'priest') priest(x + st, g, h, S.phase === 'win' ? 1 : 0, 1, walk + i);
+      else if (kind === 'soldier') { const P = person(x + st, g, h, { walk: walk + i, handF: S.phase === 'win' ? [0.3, -0.95] : null }); pen(P.lw * 0.6); poly([[P.hf[0], P.hf[1] + h * 0.2], [P.hf[0] + h * 0.05, P.hf[1] - h * 0.5]]); }
+      else { // ark of the covenant carried on poles
+        person(x - h * 0.22, g, h, { walk: walk + i, handF: [0.6, -0.1] }); person(x + h * 0.22, g, h, { walk: walk + i + 1, handB: [-0.6, -0.1] });
+        const y = g - h * 0.72; ctx.fillStyle = '#2b2f36'; ctx.fillRect(x - h * 0.16, y - h * 0.18, h * 0.32, h * 0.18); pen(2.5); ctx.strokeRect(x - h * 0.16, y - h * 0.18, h * 0.32, h * 0.18);
+        poly([[x - h * 0.45, y - h * 0.04], [x + h * 0.45, y - h * 0.04]]); pen(2, 0.8); poly([[x - h * 0.12, y - h * 0.18], [x - h * 0.06, y - h * 0.28]]); poly([[x + h * 0.12, y - h * 0.18], [x + h * 0.06, y - h * 0.28]]);
+      }
+    });
+    const laps = Math.floor(S.prog / this.LAP);
+    for (let i = 0; i < this.LAPS; i++) { pen(2, i < laps ? 0.9 : 0.3); circle(E.sw * 0.5 + (i - 3) * E.sh * 0.06, E.sh * 0.08, E.sh * 0.018, i < laps); }
+    pen(3, 0.6); ctx.beginPath(); ctx.arc(E.sw * 0.5 + (Math.min(laps, 6) - 3) * E.sh * 0.06, E.sh * 0.08, E.sh * 0.03, -Math.PI / 2, -Math.PI / 2 + TAU * ((S.shown % this.LAP) / this.LAP)); if (laps < this.LAPS) ctx.stroke();
+    drawParticles(S.particles); drawFloats(S.floats);
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L4 · M3 — THE WALLS FALL (SPEED + ACCURACY)
+   Speed = how many shouts you get in. Accuracy = how hard each shout hits.
+   --------------------------------------------------------------------- */
+const WallsFall = {
+  id: 'L4M3', title: 'The Walls Fall', duration: 45, caseSensitive: true, NEED: 7,
+  hint: 'Type the verse · every clean word is a mighty shout',
+  pick(S) { return feedPick(S); },
+  init(S) {
+    const vs = [...JOSHUA_VERSES].sort(() => Math.random() - 0.5);
+    feedInit(S, verseFeed(vs)); Object.assign(S, { dmg: 0, shown: 0, tally: [0, 0, 0, 0, 0], phase: 'play', endT: 0, blow: 0, shake: 0, spare: 0, fallen: false, cheer: 0 });
+  },
+  wall() { return { x0: E.sw * 0.55, x1: E.sw * 0.98, h: E.sh * 0.55 }; },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    const it = feedKey(S, ok); if (!it) return;
+    const q = Math.min(it.miss, 4), c = credit(q), W = this.wall();
+    S.tally[q]++; S.dmg += c; S.blow = 1; S.shake = c;
+    Sound.horn(q === 0 ? 262 : 220, q === 0 ? 0.9 : 0.5, q >= 2);
+    floatText(S.floats, (W.x0 + W.x1) / 2, E.g - W.h * 1.1, ['Mighty shout!', 'Good', 'Weak', 'Faint', 'Missed'][q], Math.max(14, E.sh * 0.06));
+    if (S.dmg >= this.NEED) { S.phase = 'win'; S.endT = 0; S.spare = Math.max(0, Math.round(this.duration - E.elapsed)); E.end(); }
+  },
+  onTimeUp(S) { S.phase = 'lose'; S.endT = 0; },
+  update(S, dt) {
+    S.line = S.phase === 'play' ? feedLine(S) : null;
+    S.shown += (S.dmg - S.shown) * Math.min(1, dt * 5);
+    S.blow = Math.max(0, S.blow - dt * 1.2); S.shake = Math.max(0, S.shake - dt * 2);
+    const t = S.tally, tally = `Mighty ${t[0]} · Good ${t[1]} · Weak ${t[2]} · Faint ${t[3]} · Missed ${t[4]}`;
+    if (S.phase === 'win') {
+      if (!S.fallen && S.endT > 0.5) { const W = this.wall(); S.fallen = true; collapseWall(S, W.x0, W.x1, W.h); }
+      if (S.endT > 1) S.cheer = Math.min(1, S.cheer + dt * 3);
+      endAfter(S, dt, 3.2, () => ({ win: true, title: 'The Walls Fell!', verse: '“…the wall fell down flat, so that the people went up into the city…” — Joshua 6:20',
+        lines: [`<hi>The walls fell with ${S.spare}s to spare</hi>`, tally], score: S.spare, bestLabel: `${S.spare}s to spare` }));
+    }
+    if (S.phase === 'lose') endAfter(S, dt, 1.8, () => ({ win: false, title: 'Try Again', verse: '“By faith the walls of Jericho fell down…” — Hebrews 11:30',
+      lines: [`The walls were ${Math.round(clamp(S.dmg / this.NEED) * 100)}% shaken`, tally, 'Tip: clean words shout the loudest.'] }));
+  },
+  render(S) {
+    hills();
+    const W = this.wall();
+    if (!S.fallen) jerichoWall(W.x0, W.x1, W.h, clamp(S.shown / this.NEED), S.shake * 3);
+    else { pen(2, 0.5); for (let i = 0; i < 8; i++) poly([[W.x0 + (W.x1 - W.x0) * i / 8, E.g], [W.x0 + (W.x1 - W.x0) * (i + 0.6) / 8, E.g - E.sh * 0.03]]); }
+    const h = E.sh * 0.38;
+    const end = priest(E.sw * 0.3, E.g, h, S.blow);
+    priest(E.sw * 0.2, E.g, h * 0.95, S.blow * 0.8);
+    const up = S.cheer || (S.blow > 0.5 ? 0.6 : 0);
+    [0.06, 0.12, 0.38, 0.45].forEach((fx, i) => person(E.sw * fx, E.g, h * (0.85 + (i % 2) * 0.1), { bob: -Math.abs(Math.sin(E.clock * 8 + i)) * h * 0.08 * S.cheer, handF: up ? [0.3, -0.95] : null, handB: up ? [0.2, -0.95] : null }));
+    if (S.blow > 0) arcs(end[0], end[1], E.sw * 0.12, 4, E.clock * 1.2, 1, 0.5 * S.blow);
+    drawParticles(S.particles); drawFloats(S.floats);
+  }
+};
+
+/* =====================================================================
+   LESSON 5 — NUMBER ROW (Feeding the 5,000 · John 6)
+   ===================================================================== */
+const LEFT_DIGITS = ['1', '2', '3', '4', '5'], RIGHT_DIGITS = ['6', '7', '8', '9', '0'], ALL_DIGITS = [...LEFT_DIGITS, ...RIGHT_DIGITS];
+function loaf(x, y, s) { ctx.beginPath(); ctx.ellipse(x, y, s, s * 0.55, 0, 0, TAU); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fill(); pen(1.2, 0.6, '30,34,40'); for (let i = -1; i <= 1; i++) poly([[x + i * s * 0.4 - s * 0.1, y - s * 0.3], [x + i * s * 0.4 + s * 0.1, y + s * 0.3]]); }
+function fish(x, y, s, face = 1) {
+  ctx.beginPath(); ctx.ellipse(x, y, s, s * 0.42, 0, 0, TAU); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - face * s * 0.9, y); ctx.lineTo(x - face * s * 1.5, y - s * 0.45); ctx.lineTo(x - face * s * 1.5, y + s * 0.45); ctx.closePath(); ctx.fill();
+  pen(1, 0.7, '30,34,40'); circle(x + face * s * 0.55, y - s * 0.08, Math.max(1, s * 0.09), true);
+}
+function basket(x, y, w, h, fill = 0) {
+  ctx.beginPath(); ctx.moveTo(x - w / 2, y - h); ctx.lineTo(x - w * 0.38, y); ctx.lineTo(x + w * 0.38, y); ctx.lineTo(x + w / 2, y - h); ctx.closePath();
+  ctx.fillStyle = '#2b2f36'; ctx.fill();
+  if (fill > 0) { ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(x - w / 2, y - h * fill, w, h * fill); ctx.restore(); }
+  pen(Math.max(1.5, w * 0.05)); ctx.beginPath(); ctx.moveTo(x - w / 2, y - h); ctx.lineTo(x - w * 0.38, y); ctx.lineTo(x + w * 0.38, y); ctx.lineTo(x + w / 2, y - h); ctx.stroke();
+  pen(1, 0.35); for (let i = 1; i < 3; i++) poly([[x - w * (0.5 - i * 0.04), y - h * (1 - i / 3)], [x + w * (0.5 - i * 0.04), y - h * (1 - i / 3)]]);
+}
+// seated crowd: n people in rows; state(i) → { stand, fed }
+function crowd(n, x0, x1, yTop, rows, h, state) {
+  const per = Math.ceil(n / rows);
+  for (let r = rows - 1; r >= 0; r--) for (let c = 0; c < per; c++) {
+    const i = r * per + c; if (i >= n) continue;
+    const x = lerp(x0, x1, (c + 0.5 + (r % 2) * 0.4) / (per + 0.4)), g = yTop + (E.g - yTop) * (r + 1) / rows;
+    const s = state(i), hh = h * (0.75 + r * 0.12);
+    ctx.save(); ctx.globalAlpha = 0.55 + r * 0.15;
+    if (s.stand) { const P = person(x, g, hh, { face: -1, handF: [0.2, -0.95 - Math.sin(E.clock * 9 + i) * 0.1], handB: [0.3, -0.8] }); text('!', P.head[0], P.head[1] - P.r * 2.4, hh * 0.18, 0.9); }
+    else { const P = person(x, g, hh, { face: -1, sit: true, handF: s.fed ? [0.45, -0.3] : null }); if (s.fed) loaf(P.hf[0], P.hf[1] - hh * 0.03, hh * 0.06); }
+    ctx.restore();
+  }
+}
+
+/* ---------------------------------------------------------------------
+   L5 · M1 — COUNT THE LOAVES (left hand, ACCURACY → exact counts)
+   --------------------------------------------------------------------- */
+const CountLoaves = {
+  id: 'L5M1', title: 'Count the Loaves', duration: 120, ITEMS: 10, NEED: 8,
+  hint: 'Left hand: reach up to 1 2 3 4 5 · type each number exactly, then Space',
+  pick(S) { return feedPick(S); },
+  init(S) { feedInit(S, numFeed(LEFT_DIGITS, 1, 3)); Object.assign(S, { pile: [], tries: 0, phase: 'play', endT: 0, crumbs: 0 }); },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    const it = feedKey(S, ok); if (!it) return;
+    S.tries++;
+    const B = this.basket();
+    if (!it.miss) { S.pile.push({ k: S.pile.length % 7 < 5 ? 'loaf' : 'fish', t: 0 }); Sound.blip(NOTES[S.pile.length % 10]); floatText(S.floats, B.x, B.y - B.h * 2.2, `${it.t} ✓`, Math.max(14, E.sh * 0.06)); }
+    else { Sound.twang(); burst(S.particles, B.x, B.y - B.h, 8, 'dust', E.sh * 0.3, E.sh * 0.015); floatText(S.floats, B.x, B.y - B.h * 2.2, 'Miscounted', Math.max(14, E.sh * 0.06)); }
+    if (S.tries >= this.ITEMS) { S.phase = 'end'; S.endT = 0; E.end(); }
+  },
+  onTimeUp(S) { S.phase = 'end'; S.endT = 0; },
+  basket() { return { x: E.sw * 0.5, y: E.g - E.sh * 0.02, w: E.sh * 0.42, h: E.sh * 0.18 }; },
+  update(S, dt) {
+    S.line = S.phase === 'play' ? feedLine(S) : null;
+    S.pile.forEach(p => p.t += dt);
+    if (S.phase === 'end') {
+      const p = S.pile.length, win = p >= this.NEED;
+      endAfter(S, dt, 1.8, () => ({ win, title: win ? 'Counted Right!' : 'Try Again',
+        verse: win ? '“There is a lad here, which hath five barley loaves, and two small fishes…” — John 6:9' : '“…what are they among so many?” — John 6:9',
+        lines: [`<hi>${p} of ${this.ITEMS} numbers counted exactly</hi>`, `Goal: ${this.NEED}`], score: p, bestLabel: `${p}/${this.ITEMS} exact` }));
+    }
+  },
+  render(S) {
+    hills();
+    const B = this.basket();
+    person(E.sw * 0.3, E.g, E.sh * 0.32, { handF: [0.9, 0.2] });           // the lad
+    S.pile.forEach((p, i) => {
+      const col = i % 4, row = Math.floor(i / 4), drop = easeOut(clamp(p.t * 4));
+      const x = B.x + (col - 1.5) * B.w * 0.2 + (row % 2) * B.w * 0.08, y = B.y - B.h * 0.6 - row * B.h * 0.38 - (1 - drop) * E.sh * 0.2;
+      p.k === 'loaf' ? loaf(x, y, B.w * 0.1) : fish(x, y, B.w * 0.09, i % 2 ? 1 : -1);
+    });
+    basket(B.x, B.y, B.w, B.h);
+    drawParticles(S.particles); drawFloats(S.floats);
+    text(`Count ${Math.min(S.tries + 1, this.ITEMS)} of ${this.ITEMS}`, E.sw * 0.78, E.sh * 0.1, Math.max(12, E.sh * 0.045), 0.55, 600);
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L5 · M2 — FEED THE MULTITUDE (right hand, SPEED → people fed)
+   --------------------------------------------------------------------- */
+const FeedMultitude = {
+  id: 'L5M2', title: 'Feed the Multitude', duration: 40, PER: 100, GOAL: 5000,
+  hint: 'Right hand: reach up to 6 7 8 9 0 · every digit feeds 100 people',
+  pick(S) { return feedPick(S); },
+  init(S) { feedInit(S, numFeed(RIGHT_DIGITS, 2, 4)); Object.assign(S, { fed: 0, shown: 0, trips: 0, phase: 'play', endT: 0, spare: 0 }); },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    feedKey(S, ok);
+    if (!ok) return;
+    S.fed += this.PER; S.trips++;
+    if (S.fed % 1000 === 0) Sound.blip(NOTES[(S.fed / 1000) % 10 + 3]);
+    if (S.fed >= this.GOAL) { S.phase = 'win'; S.endT = 0; S.spare = Math.max(0, Math.round(this.duration - E.elapsed)); E.end(); }
+  },
+  onTimeUp(S) { S.phase = 'lose'; S.endT = 0; },
+  update(S, dt) {
+    S.line = S.phase === 'play' ? feedLine(S) : null;
+    S.shown += (S.fed - S.shown) * Math.min(1, dt * 6);
+    if (S.phase === 'win') endAfter(S, dt, 2.2, () => ({ win: true, title: 'All Were Fed!', verse: '“And they did all eat, and were filled…” — Matthew 14:20',
+      lines: [`<hi>5,000 fed with ${S.spare}s to spare</hi>`], score: S.spare, bestLabel: `${S.spare}s to spare` }));
+    if (S.phase === 'lose') endAfter(S, dt, 1.6, () => ({ win: false, title: 'Try Again', verse: '“Give ye them to eat.” — Mark 6:37', lines: [`Fed: ${S.fed.toLocaleString()} of 5,000`] }));
+  },
+  render(S) {
+    hills();
+    const n = 50, fedN = Math.floor(S.shown / this.PER);
+    crowd(n, E.sw * 0.36, E.sw * 0.98, E.g - E.sh * 0.42, 4, E.sh * 0.2, i => ({ fed: i < fedN }));
+    // disciple carrying bread back and forth
+    const ph = (S.shown / this.PER) * 0.5, x = lerp(E.sw * 0.14, E.sw * 0.3, (1 - Math.cos(ph * Math.PI)) / 2), dir = Math.sin(ph * Math.PI) >= 0 ? 1 : -1;
+    basket(E.sw * 0.07, E.g, E.sh * 0.16, E.sh * 0.09, 0.8);
+    const P = person(x, E.g, E.sh * 0.36, { face: dir, walk: ph * 6, handF: [0.6, -0.1] });
+    basket(P.hf[0], P.hf[1] + E.sh * 0.01, E.sh * 0.1, E.sh * 0.05, 0.9);
+    text(`Fed: ${Math.round(S.shown).toLocaleString()} / 5,000`, E.sw * 0.67, E.sh * 0.08, Math.max(14, E.sh * 0.06), 0.85, 700);
+    drawParticles(S.particles); drawFloats(S.floats);
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L5 · M3 — TWELVE BASKETS (both hands, SPEED + ACCURACY)
+   Speed keeps the crowd content. Mistakes drop bread (and stir them up).
+   Every exact number gathers a basket of fragments.
+   --------------------------------------------------------------------- */
+const TwelveBaskets = {
+  id: 'L5M3', title: 'Twelve Baskets', duration: 45,
+  CFG: { START: 0.3, RISE: 0.03, CALM: 0.026, MISS: 0.07 },
+  STORY: ['5000', '12', '5', '2', '50', '100', '200'],
+  hint: 'All digits · keep the crowd fed; exact numbers fill baskets',
+  pick(S) { return feedPick(S); },
+  init(S) {
+    feedInit(S, (s, n) => Math.random() < 0.35 ? { t: pickOne(this.STORY) } : numFeed(ALL_DIGITS, 2, 4)());
+    Object.assign(S, { hunger: this.CFG.START, shown: this.CFG.START, peak: this.CFG.START, baskets: 0, phase: 'play', endT: 0, sat: 0 });
+    S.th = [...Array(40).keys()].map(() => rand(0.38, 0.98));
+  },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    if (ok) S.hunger = Math.max(0, S.hunger - this.CFG.CALM);
+    else { S.hunger += this.CFG.MISS; Sound.twang(); burst(S.particles, E.sw * 0.22, E.g - E.sh * 0.2, 5, 'dust', E.sh * 0.3, E.sh * 0.012); }
+    const it = feedKey(S, ok); if (!it) return;
+    if (!it.miss && S.baskets < 12) { S.baskets++; Sound.blip(NOTES[S.baskets % 10]); floatText(S.floats, this.bx(S.baskets - 1), this.by(S.baskets - 1) - E.sh * 0.1, '+1', Math.max(13, E.sh * 0.05)); }
+  },
+  bx(i) { return E.sw * 0.04 + (i % 6) * E.sw * 0.042; },
+  by(i) { return E.g - Math.floor(i / 6) * E.sh * 0.1; },
+  onTimeUp(S) { S.phase = 'win'; S.endT = 0; },
+  update(S, dt) {
+    S.line = S.phase === 'play' ? feedLine(S) : null;
+    if (S.phase === 'play' && E.state === 'playing') {
+      S.hunger += this.CFG.RISE * dt; S.peak = Math.max(S.peak, S.hunger);
+      if (S.hunger >= 1) { S.hunger = 1; S.phase = 'lose'; S.endT = 0; E.end(); }
+    }
+    if (S.phase === 'win') S.hunger = Math.max(0, S.hunger - dt * 0.8);
+    S.shown += (S.hunger - S.shown) * Math.min(1, dt * 3);
+    if (S.phase === 'win') endAfter(S, dt, 2.4, () => ({ win: true, title: 'Filled!', verse: '“…and filled twelve baskets with the fragments…” — John 6:13',
+      lines: [`<hi>${S.baskets} of 12 baskets gathered</hi>`, `The crowd stayed ${Math.round((1 - S.peak) * 100)}% content at its hungriest`], score: S.baskets * 100 + Math.round((1 - S.peak) * 99), bestLabel: `${S.baskets}/12 baskets` }));
+    if (S.phase === 'lose') endAfter(S, dt, 1.8, () => ({ win: false, title: 'Try Again', verse: '“Gather up the fragments that remain, that nothing be lost.” — John 6:12',
+      lines: [`The crowd grew restless with ${Math.max(0, Math.ceil(this.duration - E.elapsed))}s left`, `Baskets gathered: ${S.baskets}`] }));
+  },
+  render(S) {
+    hills();
+    crowd(40, E.sw * 0.4, E.sw * 0.98, E.g - E.sh * 0.42, 4, E.sh * 0.2, i => ({ stand: S.shown > S.th[i], fed: S.shown < 0.3 }));
+    const P = person(E.sw * 0.33, E.g, E.sh * 0.38, { face: 1, handF: [0.8, -0.2 - Math.sin(E.clock * 4) * 0.05] });
+    loaf(P.hf[0] + E.sh * 0.03, P.hf[1] - E.sh * 0.02, E.sh * 0.035);
+    for (let i = 11; i >= 0; i--) basket(this.bx(i), this.by(i), E.sh * 0.07, E.sh * 0.06, i < S.baskets ? 1 : 0);
+    drawParticles(S.particles); drawFloats(S.floats);
+  }
+};
+
+/* =====================================================================
+   LESSON 6 — SCRIPTURE PASSAGES (The Red Sea · Exodus 14–15)
+   ===================================================================== */
+const EXODUS_VERSES = [
+  { t: 'The LORD shall fight for you, and ye shall hold your peace.', ref: 'Exodus 14:14' },
+  { t: 'Fear ye not, stand still, and see the salvation of the LORD.', ref: 'Exodus 14:13' },
+  { t: 'And Moses stretched out his hand over the sea;', ref: 'Exodus 14:21' },
+  { t: 'And the children of Israel went into the midst of the sea upon the dry ground:', ref: 'Exodus 14:22' },
+  { t: 'and the waters were a wall unto them on their right hand, and on their left.', ref: 'Exodus 14:22' },
+  { t: 'The LORD is my strength and song, and he is become my salvation:', ref: 'Exodus 15:2' }
+];
+const shuffled = a => [...a].sort(() => Math.random() - 0.5);
+// sea between x0..x1. part 0 = closed sea, 1 = fully parted (tall wall behind a dry path)
+function redSea(x0, x1, part, closeBack = 0) {
+  const g = E.g, seaY = g - E.sh * 0.2, wallY = g - E.sh * lerp(0.2, 0.78, part);
+  const wav = (x, y, a) => y + Math.sin(x * 0.03 + E.clock * 2.2) * a + Math.sin(x * 0.013 - E.clock) * a;
+  // back wall
+  ctx.beginPath(); ctx.moveTo(x0, g);
+  ctx.quadraticCurveTo(x0 - E.sw * 0.02 * part, lerp(g, wallY, 0.6), x0 + E.sw * 0.03 * part, wallY);
+  for (let x = x0 + E.sw * 0.03 * part; x <= x1 - E.sw * 0.03 * part; x += 8) ctx.lineTo(x, wav(x, wallY, 3 + part * 3));
+  ctx.quadraticCurveTo(x1 + E.sw * 0.02 * part, lerp(g, wallY, 0.6), x1, g); ctx.closePath();
+  ctx.fillStyle = `rgba(111,168,255,${0.12 + part * 0.1})`; ctx.fill(); pen(2, 0.6, '190,215,255'); ctx.stroke();
+  if (part > 0.3) { pen(1.5, 0.25 * part, '190,215,255'); for (let i = 1; i < 5; i++) { ctx.beginPath(); for (let x = x0 + 20; x <= x1 - 20; x += 10) { const y = wav(x + i * 40, lerp(wallY, g, i / 5), 2); x === x0 + 20 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); } }
+  // water still covering the path (closed sea) / returning water
+  const cover = Math.max(1 - part, closeBack);
+  if (cover > 0.01) water(lerp(g, seaY - E.sh * 0.15 * closeBack, cover), x0, x1, 0.25 * cover + 0.1, 4);
+}
+function staffMoses(x, g, h, raise, face = 1) {
+  const P = person(x, g, h, { face, handF: [lerp(0.5, 0.35, raise), lerp(0.1, -1.0, raise)], handB: [0.2, 0.8] });
+  const a = lerp(-1.3, -1.75, raise) * (face > 0 ? 1 : -1) + (face > 0 ? 0 : -Math.PI);
+  pen(P.lw * 0.8); poly([[P.hf[0] - Math.cos(a) * h * 0.25, P.hf[1] - Math.sin(a) * h * 0.25], [P.hf[0] + Math.cos(a) * h * 0.45, P.hf[1] + Math.sin(a) * h * 0.45]]);
+  pen(P.lw * 0.6, 0.8); poly([[P.head[0] + face * P.r * 0.3, P.head[1] + P.r * 0.8], [P.head[0] + face * P.r * 0.1, P.head[1] + P.r * 1.6], [P.head[0] - face * P.r * 0.3, P.head[1] + P.r * 0.8]]);
+  if (raise > 0.8) { const t = [P.hf[0] + Math.cos(a) * h * 0.45, P.hf[1] + Math.sin(a) * h * 0.45]; pen(1, 0.25 * (raise - 0.8) * 5); circle(t[0], t[1], h * 0.08, true); }
+  return P;
+}
+function rock(x0, x1, h) { ctx.beginPath(); ctx.moveTo(x0, E.g); ctx.quadraticCurveTo(x0 + (x1 - x0) * 0.1, E.g - h, (x0 + x1) / 2, E.g - h); ctx.quadraticCurveTo(x1 - (x1 - x0) * 0.1, E.g - h, x1, E.g); ctx.fillStyle = '#2b2f36'; ctx.fill(); pen(2.5, 0.8); ctx.stroke(); }
+function chariot(x, g, s, wheel, alpha = 1) {
+  ctx.save(); ctx.globalAlpha = alpha;
+  animal(x + s * 0.55, g, s * 0.75, 6, 1, wheel * 2);
+  pen(Math.max(2, s * 0.03)); poly([[x + s * 0.2, g - s * 0.28], [x + s * 0.32, g - s * 0.3]]);
+  ctx.fillStyle = '#2b2f36'; ctx.fillRect(x - s * 0.18, g - s * 0.42, s * 0.38, s * 0.22); ctx.strokeRect(x - s * 0.18, g - s * 0.42, s * 0.38, s * 0.22);
+  circle(x, g - s * 0.17, s * 0.17, false);
+  for (let i = 0; i < 3; i++) { const a = wheel + i * Math.PI / 3; poly([[x - Math.cos(a) * s * 0.17, g - s * 0.17 - Math.sin(a) * s * 0.17], [x + Math.cos(a) * s * 0.17, g - s * 0.17 + Math.sin(a) * s * 0.17]]); }
+  person(x - s * 0.02, g - s * 0.42, s * 0.42, { handF: [0.9, 0.1] });
+  ctx.restore();
+}
+function cloudPillar(x, a) {
+  if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha = a;
+  for (let i = 0; i < 7; i++) { const y = E.g - E.sh * (0.1 + i * 0.12), r = E.sh * (0.07 + Math.sin(E.clock * 2 + i) * 0.01); ctx.fillStyle = 'rgba(255,255,255,0.2)'; circle(x + Math.sin(E.clock * 1.5 + i) * 8, y, r, true); pen(2, 0.8); circle(x + Math.sin(E.clock * 1.5 + i) * 8, y, r, false); }
+  ctx.restore();
+}
+
+/* ---------------------------------------------------------------------
+   L6 · M1 — RAISE THE STAFF (ACCURACY → faith)
+   --------------------------------------------------------------------- */
+const RaiseStaff = {
+  id: 'L6M1', title: 'Raise the Staff', duration: 150, caseSensitive: true, PCT: 80,
+  hint: 'Type the verse exactly — capitals, commas and all',
+  pick(S) { return feedPick(S); },
+  init(S) {
+    const vs = shuffled(EXODUS_VERSES).slice(0, 2);
+    S.total = vs.reduce((n, v) => n + v.t.split(' ').length, 0);
+    feedInit(S, verseFeed(vs)); Object.assign(S, { faith: 0, shown: 0, phase: 'play', endT: 0, part: 0 });
+  },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    const it = feedKey(S, ok); if (!it) return;
+    if (!it.miss) { S.faith = Math.min(1, S.faith + 1.25 / S.total); Sound.blip(NOTES[Math.min(9, Math.floor(S.faith * 10))]); }
+    else { S.faith = Math.max(0, S.faith - 0.6 / S.total); Sound.twang(); floatText(S.floats, E.sw * 0.2, E.g - E.sh * 0.7, `“${it.t}”`, Math.max(12, E.sh * 0.045)); }
+    if (S.feed.done >= S.total) { S.phase = 'end'; S.endT = 0; E.end(); }
+  },
+  onTimeUp(S) { S.phase = 'end'; S.endT = 0; },
+  update(S, dt) {
+    S.line = S.phase === 'play' ? feedLine(S) : null;
+    S.shown += (S.faith - S.shown) * Math.min(1, dt * 4);
+    const pct = Math.round(100 * S.feed.perfect / Math.max(1, S.feed.done)), win = S.phase === 'end' && S.feed.done >= S.total && pct >= this.PCT;
+    S.part = win ? Math.min(1, S.part + dt * 0.6) : S.shown * 0.35;
+    if (S.phase === 'end') endAfter(S, dt, win ? 3 : 1.6, () => ({ win, title: win ? 'The Sea Divides!' : 'Try Again',
+      verse: win ? '“…and the LORD caused the sea to go back by a strong east wind…” — Exodus 14:21' : '“Fear ye not, stand still, and see the salvation of the LORD…” — Exodus 14:13',
+      lines: [`<hi>${pct}% of words typed perfectly</hi>  ·  Goal: ${this.PCT}%`, `Words: ${S.feed.done} of ${S.total}`], score: pct, bestLabel: `${pct}% perfect` }));
+  },
+  render(S) {
+    redSea(E.sw * 0.34, E.sw * 0.99, S.part);
+    if (S.shown > 0.2) { pen(1.5, 0.25 * S.shown); for (let i = 0; i < 6; i++) { const y = E.sh * (0.15 + i * 0.07), x = ((E.clock * 220 + i * 170) % (E.sw * 0.8)) + E.sw * 0.2; poly([[x, y], [x + E.sw * 0.06, y]]); } }
+    rock(E.sw * 0.04, E.sw * 0.32, E.sh * 0.1);
+    staffMoses(E.sw * 0.18, E.g - E.sh * 0.1, E.sh * 0.42, S.shown);
+    for (let i = 0; i < 4; i++) person(E.sw * (0.02 + i * 0.025), E.g, E.sh * 0.26, { alpha: 0.5 });
+    drawParticles(S.particles); drawFloats(S.floats);
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L6 · M2 — CROSS ON DRY GROUND (SPEED → people across)
+   --------------------------------------------------------------------- */
+const CrossSea = {
+  id: 'L6M2', title: 'Cross on Dry Ground', duration: 50, caseSensitive: true, NEED: 80, N: 16,
+  hint: 'Type steadily · every correct key moves Israel forward',
+  pick(S) { return feedPick(S); },
+  init(S) { feedInit(S, verseFeed(shuffled(EXODUS_VERSES))); Object.assign(S, { prog: 0, shown: 0, phase: 'play', endT: 0, spare: 0 }); },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    feedKey(S, ok);
+    if (!ok) return;
+    S.prog++;
+    if (S.prog >= this.NEED) { S.phase = 'win'; S.endT = 0; S.spare = Math.max(0, Math.round(this.duration - E.elapsed)); E.end(); }
+  },
+  onTimeUp(S) { S.phase = 'lose'; S.endT = 0; },
+  pos(S, j) { return E.sw * (lerp(-0.62, 0.86, clamp(S.shown / this.NEED)) + j * 0.038); },
+  crossed(S) { let c = 0; for (let j = 0; j < this.N; j++) if (this.pos(S, j) > E.sw * 0.82) c++; return c; },
+  update(S, dt) {
+    S.line = S.phase === 'play' ? feedLine(S) : null;
+    S.shown += (S.prog - S.shown) * Math.min(1, dt * 5);
+    if (S.phase === 'win') endAfter(S, dt, 2.2, () => ({ win: true, title: 'Safely Across!', verse: '“But the children of Israel walked upon dry land in the midst of the sea…” — Exodus 14:29',
+      lines: [`<hi>All crossed with ${S.spare}s to spare</hi>`], score: S.spare, bestLabel: `${S.spare}s to spare` }));
+    if (S.phase === 'lose') endAfter(S, dt, 1.6, () => ({ win: false, title: 'Try Again', verse: '“…speak unto the children of Israel, that they go forward.” — Exodus 14:15',
+      lines: [`${this.crossed(S)} of ${this.N} reached the far shore`] }));
+  },
+  render(S) {
+    redSea(E.sw * 0.18, E.sw * 0.8, 1);
+    rock(E.sw * 0.84, E.sw * 1.02, E.sh * 0.08);
+    staffMoses(E.sw * 0.93, E.g - E.sh * 0.08, E.sh * 0.38, 1, -1);
+    let k = 0;
+    for (let j = this.N - 1; j >= 0; j--) {
+      let x = this.pos(S, j), across = x > E.sw * 0.82;
+      if (across) { x = E.sw * (0.83 + (k % 4) * 0.025); k++; }
+      if (x < -20) continue;
+      person(x, E.g - (across ? E.sh * 0.02 : 0), E.sh * (0.24 + (j % 3) * 0.03), { walk: across ? null : S.shown * 1.3 + j, alpha: across ? 0.6 : 1, handF: across && S.phase === 'win' ? [0.3, -0.95] : null });
+    }
+    text(`${this.crossed(S)} / ${this.N} across`, E.sw * 0.5, E.sh * 0.08, Math.max(13, E.sh * 0.05), 0.75, 700);
+    drawParticles(S.particles); drawFloats(S.floats);
+  }
+};
+
+/* ---------------------------------------------------------------------
+   L6 · M3 — HOLD BACK THE SEA (SPEED + ACCURACY)
+   Speed = Israel crosses. Accuracy = each clean word raises the pillar of
+   cloud between Israel and the chariots (Exodus 14:19-20).
+   --------------------------------------------------------------------- */
+const HoldSea = {
+  id: 'L6M3', title: 'Hold Back the Sea', duration: 600, caseSensitive: true, NEED: 80, START: -0.35, TRAVEL: 47, FIELD: 40, N: 10,
+  hint: 'Type to cross · clean words raise the pillar of cloud',
+  pick(S) { return feedPick(S); },
+  init(S) { feedInit(S, verseFeed(shuffled(EXODUS_VERSES))); Object.assign(S, { p: 0, shown: 0, c: this.START, stunUntil: -1, stunMax: 1, tally: [0, 0, 0, 0, 0], phase: 'play', endT: 0, spare: 0, back: 0, wheel: 0 }); },
+  x(v) { return E.sw * lerp(0.1, 0.86, v); },
+  onKey(S, ok) {
+    if (S.phase !== 'play') return;
+    if (ok) { S.p = Math.min(1, S.p + 1 / this.NEED); }
+    const it = feedKey(S, ok);
+    if (it) {
+      const q = Math.min(it.miss, 4), st = ZONE_STUN[q]; S.tally[q]++;
+      if (st > 0) { S.stunUntil = Math.max(S.stunUntil, E.clock + st); S.stunMax = st; Sound.horn(220, 0.4); }
+      floatText(S.floats, this.x(S.c) + E.sw * 0.07, E.g - E.sh * 0.75, ['Pillar of cloud!', 'Cloud', 'Mist', 'Haze', 'Missed'][q], Math.max(13, E.sh * 0.05));
+    }
+    if (S.p >= 1) { S.phase = 'win'; S.endT = 0; S.spare = Math.max(0, Math.round((S.p - S.c) * this.FIELD)); E.end(); Sound.splash(); }
+  },
+  onTimeUp(S) { S.phase = 'lose'; S.endT = 0; },
+  update(S, dt) {
+    S.line = S.phase === 'play' ? feedLine(S) : null;
+    S.shown += (S.p - S.shown) * Math.min(1, dt * 5);
+    if (S.phase === 'play' && E.state === 'playing' && E.clock >= S.stunUntil) {
+      S.c += (1 - this.START) / this.TRAVEL * dt; S.wheel += dt * 8;
+      if (S.c >= S.shown - 0.01) { S.phase = 'lose'; S.endT = 0; E.end(); }
+    }
+    const t = S.tally, tally = `Pillar ${t[0]} · Cloud ${t[1]} · Mist ${t[2]} · Haze ${t[3]} · Missed ${t[4]}`;
+    if (S.phase === 'win') {
+      S.back = Math.min(1, S.back + dt * 0.7); S.c += dt * 0.08; S.wheel += dt * 4;
+      endAfter(S, dt, 3, () => ({ win: true, title: 'Victory!', verse: '“The LORD is my strength and song, and he is become my salvation…” — Exodus 15:2',
+        lines: [`<hi>Israel crossed with the chariots ${S.spare} cubits behind</hi>`, tally], score: S.spare, bestLabel: `${S.spare} cubits ahead` }));
+    }
+    if (S.phase === 'lose') endAfter(S, dt, 1.8, () => ({ win: false, title: 'Try Again', verse: '“The LORD shall fight for you, and ye shall hold your peace.” — Exodus 14:14',
+      lines: [`The chariots caught up ${Math.round(S.shown * 100)}% of the way across`, tally, 'Tip: clean words raise the cloud and hold the chariots longest.'] }));
+  },
+  render(S) {
+    redSea(E.sw * 0.22, E.sw * 0.82, 1, S.back);
+    fieldMarks(this.x(1), this.x(0), this.FIELD, 0);
+    rock(E.sw * 0.84, E.sw * 1.02, E.sh * 0.08);
+    staffMoses(E.sw * 0.93, E.g - E.sh * 0.08, E.sh * 0.38, 1, -1);
+    for (let j = this.N - 1; j >= 0; j--) {
+      const x = Math.min(this.x(S.shown) + j * E.sw * 0.03, E.sw * (0.8 + (j % 3) * 0.02));
+      person(x, E.g, E.sh * (0.22 + (j % 3) * 0.03), { walk: S.phase === 'lose' ? null : S.shown * 60 + j, handF: S.phase === 'win' && x > E.sw * 0.78 ? [0.3, -0.95] : null });
+    }
+    const cx = this.x(S.c);
+    if (cx > -E.sw * 0.2) chariot(cx, E.g, E.sh * 0.42, S.wheel, S.phase === 'win' ? 1 - S.back * 0.8 : 1);
+    const stun = clamp((S.stunUntil - E.clock) / Math.max(0.25, S.stunMax));
+    cloudPillar(Math.min(cx + E.sw * 0.09, this.x(S.shown) - E.sw * 0.03), stun);
+    if (S.phase === 'win') water(E.g - E.sh * 0.25 * S.back, E.sw * 0.22, E.sw * 0.82, 0.3 * S.back, 5);
+    drawParticles(S.particles); drawFloats(S.floats);
+  }
+};
+
+/* =====================================================================
+   MENU + UI
+   ===================================================================== */
+const GAMES = { L1M1: StrikeMark, L1M2: PowerSling, L1M3: FaceGiant, L2M1: TuneHarp, L2M2: GatherFlock, L2M3: SootheSaul,
+  L3M1: SealArk, L3M2: TwoByTwo, L3M3: FloodRises, L4M1: SoundTrumpets, L4M2: MarchCity, L4M3: WallsFall,
+  L5M1: CountLoaves, L5M2: FeedMultitude, L5M3: TwelveBaskets, L6M1: RaiseStaff, L6M2: CrossSea, L6M3: HoldSea };
+// Every lesson: Module 1 trains ACCURACY, Module 2 trains SPEED, Module 3 needs both.
+const LESSONS = [
+  { title: 'Lesson 1', subtitle: 'Home Row', story: 'David and Goliath — 1 Samuel 17', keys: HOME_KEYS, modules: [
+    { id: 'L1M1', kind: 'Left Hand · Accuracy', keys: 'a s d f', desc: 'Every 5 letters David slings at a target. The fewer mistakes, the closer to the bullseye.' },
+    { id: 'L1M2', kind: 'Right Hand · Speed', keys: 'j k l ;', desc: 'Every letter spins the sling faster. When time runs out the stone flies — how far will it go?' },
+    { id: 'L1M3', kind: 'Both Hands · Speed + Accuracy', keys: 'a s d f j k l ;', desc: 'Speed throws more stones; accuracy aims them. A clean volley hits his head and stuns him longest.' }] },
+  { title: 'Lesson 2', subtitle: 'Top Row', story: 'David the harpist — 1 Samuel 16', keys: TOP_ROW, modules: [
+    { id: 'L2M1', kind: 'Left Hand · Accuracy', keys: 'q w e r t', desc: 'Each correct letter tightens its string; mistakes loosen it. Tune all five strings.' },
+    { id: 'L2M2', kind: 'Right Hand · Speed', keys: 'y u i o p', desc: 'Play with a steady rhythm to call the sheep home. Stop playing and they wander.' },
+    { id: 'L2M3', kind: 'Both Hands · Speed + Accuracy', keys: 'top row + home row', desc: 'Steady playing calms King Saul; wrong notes stir his anger. Keep him calm — or dodge his spear.' }] },
+  { title: 'Lesson 3', subtitle: 'Bottom Row', story: 'Noah’s Ark — Genesis 6–9', keys: BOTTOM_ROW, modules: [
+    { id: 'L3M1', kind: 'Left Hand · Accuracy', keys: 'z x c v b', desc: 'Every 4 letters hammers a plank into the hull. Mistakes leave leaks — keep it watertight.' },
+    { id: 'L3M2', kind: 'Right Hand · Speed', keys: 'n m , . /', desc: 'Every 4 letters another pair of animals walks up the ramp. Get 10 pairs aboard before the rain.' },
+    { id: 'L3M3', kind: 'Both Hands · Speed + Accuracy', keys: 'bottom row + home row', desc: 'The flood is rising! Speed adds hull sections; accuracy makes them solid. Stay above the water.' }] },
+  { title: 'Lesson 4', subtitle: 'Shift & Punctuation', story: 'The walls of Jericho — Joshua 6', keys: ['Shift', 'A–Z', '.', ',', ';', '!', '?'], modules: [
+    { id: 'L4M1', kind: 'Accuracy', keys: 'Capitals . , ! ?', desc: 'Each clean word is a long trumpet blast. Get all seven priests sounding.' },
+    { id: 'L4M2', kind: 'Speed', keys: 'Capitalized names', desc: 'Every correct key is a step. March around Jericho seven times before time runs out.' },
+    { id: 'L4M3', kind: 'Speed + Accuracy', keys: 'KJV verses', desc: 'Type Joshua 6. Every word is a shout — clean words shake the walls hardest. Bring them down!' }] },
+  { title: 'Lesson 5', subtitle: 'Number Row', story: 'Feeding the 5,000 — John 6', keys: ALL_DIGITS, modules: [
+    { id: 'L5M1', kind: 'Left Hand · Accuracy', keys: '1 2 3 4 5', desc: 'Count the loaves and fishes exactly. Every exact number fills the basket.' },
+    { id: 'L5M2', kind: 'Right Hand · Speed', keys: '6 7 8 9 0', desc: 'Every digit feeds 100 people. Feed all 5,000 before time runs out.' },
+    { id: 'L5M3', kind: 'Both Hands · Speed + Accuracy', keys: '0 – 9', desc: 'Keep the crowd fed or they grow restless. Exact numbers gather the twelve baskets.' }] },
+  { title: 'Lesson 6', subtitle: 'Scripture Passages', story: 'The Red Sea — Exodus 14–15', keys: ['Full KJV verses'], modules: [
+    { id: 'L6M1', kind: 'Accuracy', keys: 'Exodus 14', desc: 'Type the verses exactly. Every perfect word lifts Moses’ staff higher over the sea.' },
+    { id: 'L6M2', kind: 'Speed', keys: 'Exodus 14', desc: 'Lead Israel through the sea on dry ground. Keep typing to keep them moving.' },
+    { id: 'L6M3', kind: 'Speed + Accuracy', keys: 'Exodus 14–15', desc: 'Pharaoh’s chariots are coming! Speed moves Israel across; clean words raise the pillar of cloud.' }] }
+];
+const ORDER = LESSONS.flatMap(L => L.modules.map(m => m.id));
+
+const $ = id => document.getElementById(id);
+const UI = {
+  view: 'menu', overlayOpen: false, selected: 0,
+  showMenu() {
+    this.view = 'menu'; this.overlayOpen = false; E.mod = null; E.state = 'idle';
+    $('overlay').classList.remove('show');
+    $('game-view').hidden = true; $('menu-view').hidden = false;
+    Banner.size(); renderNav(); renderDetail();
+  },
+  showGame(mod) {
+    this.view = 'game'; this.overlayOpen = false;
+    $('overlay').classList.remove('show');
+    $('menu-view').hidden = true; $('game-view').hidden = false;
+    const L = LESSONS.find(l => l.modules.some(m => m.id === mod.id));
+    const i = L.modules.findIndex(m => m.id === mod.id);
+    $('game-title').innerHTML = `${L.title} · Module ${i + 1} — <b>${mod.title}</b>`;
+    if (document.activeElement) document.activeElement.blur();
+  },
+  showOverlay(res) {
+    this.overlayOpen = true;
+    $('ov-title').textContent = res.title;
+    $('ov-verse').textContent = res.verse || '';
+    const lines = [...(res.lines || [])];
+    if (res.newBest) lines.unshift('<hi>★ New personal best!</hi>');
+    else if (res.score != null && Progress.get(E.mod.id).bestLabel) lines.push(`Personal best: ${Progress.get(E.mod.id).bestLabel}`);
+    lines.push(`Accuracy: ${Math.round(E.accuracy() * 100)}%  ·  Speed: ${E.wpm()} WPM`);
+    $('ov-stats').innerHTML = lines.map(l => l.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])).replace(/&lt;hi&gt;(.*?)&lt;\/hi&gt;/g, '<span class="hi">$1</span>')).join('<br>');
+    const idx = ORDER.indexOf(E.mod.id), next = ORDER[idx + 1];
+    const showNext = res.win && next && GAMES[next];
+    $('ov-next').hidden = !showNext;
+    $('ov-next').classList.toggle('primary', !!showNext);
+    $('ov-retry').classList.toggle('primary', !showNext);
+    $('overlay').classList.add('show');
+  },
+  primary() { if (!$('ov-next').hidden) this.next(); else this.retry(); },
+  retry() { E.start(E.mod); },
+  next() { const n = ORDER[ORDER.indexOf(E.mod.id) + 1]; if (n && GAMES[n]) E.start(GAMES[n]); }
+};
+$('ov-retry').addEventListener('click', () => UI.retry());
+$('ov-next').addEventListener('click', () => UI.next());
+$('ov-menu').addEventListener('click', () => UI.showMenu());
+$('btn-back').addEventListener('click', () => UI.showMenu());
+function syncSound() { ['btn-sound', 'btn-sound-menu'].forEach(id => $(id).textContent = `Sound: ${Sound.on ? 'On' : 'Off'}`); }
+['btn-sound', 'btn-sound-menu'].forEach(id => $(id).addEventListener('click', e => { Sound.set(!Sound.on); syncSound(); e.currentTarget.blur(); }));
+syncSound();
+
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1800); }
+
+function renderNav() {
+  const nav = $('lessons'); nav.innerHTML = '';
+  LESSONS.forEach((L, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'lesson-btn' + (L.modules.length ? '' : ' locked');
+    b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', i === UI.selected);
+    const done = L.modules.filter(m => Progress.get(m.id).done).length;
+    b.innerHTML = `<span>${L.title} · ${L.subtitle}</span><small>${L.modules.length ? `${done} / ${L.modules.length} complete` : 'Coming soon'}</small>`;
+    b.addEventListener('click', () => { UI.selected = i; renderNav(); renderDetail(); });
+    nav.appendChild(b);
+  });
+}
+function renderDetail() {
+  const L = LESSONS[UI.selected], det = $('detail');
+  const keys = L.keys.map(k => `<span class="key">${k}</span>`).join('');
+  const mods = L.modules.length ? `<div class="modules">${L.modules.map((m, i) => {
+    const g = GAMES[m.id], p = Progress.get(m.id);
+    const status = p.done ? `✓ Completed${p.bestLabel ? ' · Best: ' + p.bestLabel : ''}` : (p.bestLabel ? `Best: ${p.bestLabel} · ▶ Play` : (g ? '▶ Play' : 'In development'));
+    return `<button type="button" class="module" data-id="${m.id}" ${g ? '' : 'disabled'}>
+      <span class="tag">Module ${i + 1} · ${m.kind}</span><h3>${g ? g.title : m.id}</h3><p>${m.desc}</p>
+      <p><strong>Keys:</strong> ${m.keys}</p><span class="status ${p.done ? 'done' : ''}">${status}</span></button>`;
+  }).join('')}</div>` : `<p class="story">This lesson is being written.</p>`;
+  det.innerHTML = `<h2>${L.title}: ${L.subtitle}</h2><p class="story">${L.story}</p><div class="keys">${keys}</div>${mods}`;
+  det.querySelectorAll('.module:not(:disabled)').forEach(b => b.addEventListener('click', () => E.start(GAMES[b.dataset.id])));
+}
+$('lessons').addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') UI.selected = Math.min(LESSONS.length - 1, UI.selected + 1);
+  else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') UI.selected = Math.max(0, UI.selected - 1);
+  else return;
+  e.preventDefault(); renderNav(); renderDetail(); $('lessons').children[UI.selected].focus();
+});
+$('btn-progress').addEventListener('click', () => toast(`${ORDER.filter(id => Progress.get(id).done).length} of ${ORDER.length} modules complete`));
+$('btn-reset').addEventListener('click', () => { if (confirm('Reset all progress?')) { Progress.reset(); renderNav(); renderDetail(); toast('Progress reset'); } });
+
+/* ---------- menu banner ---------- */
+const Banner = {
+  cv: $('banner'), c: $('banner').getContext('2d'),
+  size() { const dpr = Math.min(devicePixelRatio || 1, 2); this.cv.width = this.cv.clientWidth * dpr; this.cv.height = this.cv.clientHeight * dpr; this.c.setTransform(dpr, 0, 0, dpr, 0, 0); },
+  draw(t) {
+    const c = this.c, W = this.cv.clientWidth, H = this.cv.clientHeight, g = H - 8;
+    if (!W) return;
+    if (this.cv.width < W) this.size();
+    c.clearRect(0, 0, W, H);
+    c.strokeStyle = c.fillStyle = 'rgba(255,255,255,0.9)'; c.lineCap = c.lineJoin = 'round';
+    const line = pts => { c.beginPath(); c.moveTo(...pts[0]); pts.slice(1).forEach(p => c.lineTo(...p)); c.stroke(); };
+    const head = (x, y, r) => { c.beginPath(); c.arc(x, y, r, 0, TAU); c.stroke(); };
+    const fig = (x, h, step = 0) => { const hip = [x, g - h * 0.45], sh = [x, hip[1] - h * 0.3], r = h * 0.1; line([[x - h * 0.1 + step, g], hip, [x + h * 0.1 - step, g]]); line([hip, sh]); head(x, sh[1] - r * 1.3, r); return { sh, r, hy: sh[1] - r * 1.3 }; };
+    c.lineWidth = 1; c.globalAlpha = 0.25; line([[0, g], [W, g]]); c.globalAlpha = 1;
+    c.lineWidth = 2.5;
+    const dx = W * 0.22, D = fig(dx, 46), hand = [D.sh[0] + 4, D.sh[1] - 16];
+    line([D.sh, hand]); line([D.sh, [D.sh[0] - 8, D.sh[1] + 12]]);
+    const a = t / 140, pouch = [hand[0] + Math.cos(a) * 13, hand[1] + Math.sin(a) * 6.5];
+    c.lineWidth = 1.2; line([hand, pouch]); c.beginPath(); c.arc(...pouch, 2.5, 0, 7); c.fill();
+    c.lineWidth = 3.5;
+    const gx = W * 0.4 + Math.sin(t / 1400) * 20, G = fig(gx, 80, Math.sin(t / 220) * 7);
+    line([G.sh, [G.sh[0] - 14, G.sh[1] + 22]]); line([G.sh, [G.sh[0] + 12, G.sh[1] + 18]]);
+    c.lineWidth = 2; line([[G.sh[0] + 18, G.sh[1] + 36], [G.sh[0] + 6, G.sh[1] - 40]]);
+    c.beginPath(); c.arc(gx, G.hy, G.r * 1.15, Math.PI, 0); c.stroke();
+    c.lineWidth = 2.5;
+    const tx = W * 0.78; line([[tx + 18, g], [tx + 18, g - 50]]); line([[tx - 6, g - 22], [tx + 18, g - 22]]); line([[tx - 6, g - 22], [tx - 6, g]]);
+    const sy = g - 22, sx = tx + 10;
+    line([[sx, sy], [sx, sy - 24]]); line([[sx, sy], [sx - 16, sy], [sx - 16, g]]); head(sx, sy - 31, 6);
+    line([[sx - 4, sy - 40], [sx, sy - 44], [sx + 4, sy - 40]]); line([[sx, sy - 18], [sx - 10, sy - 10 + Math.sin(t / 600) * 2]]);
+    const hx = W * 0.64, H2 = fig(hx, 40);
+    c.lineWidth = 1.5; c.beginPath(); c.moveTo(hx + 8, H2.sh[1] + 16); c.quadraticCurveTo(hx + 22, H2.sh[1], hx + 12, H2.sh[1] - 8); c.stroke();
+    line([[hx + 8, H2.sh[1] + 16], [hx + 12, H2.sh[1] - 8]]);
+    c.lineWidth = 2.5; line([H2.sh, [hx + 12, H2.sh[1] + 6]]);
+    c.font = '14px serif';
+    for (let i = 0; i < 3; i++) { const p = ((t / 2400) + i / 3) % 1; c.globalAlpha = 1 - p; c.fillText('♪', hx + 20 + p * 40, H2.sh[1] - p * 40); }
+    c.globalAlpha = 1;
+  }
+};
+
+if (/[?&]embed\b/.test(location.search)) document.body.classList.add('embed');
+UI.showMenu();
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
+
+

@@ -169,27 +169,22 @@
             color: var(--text-muted);
         }
         #game-ui { display: none; }
-        #mario-ui {
+        #tutorial-ui {
             display: none;
             text-align: center;
-            padding: 1rem;
-            justify-content: center;
-            align-items: center;
-        }
-        #mario-ui h2 {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 1.8rem;
-            margin-bottom: 1rem;
-            color: var(--accent);
+            /* a little wider/tighter than other cards so the tutorial gets its full desktop layout */
+            max-width: 1040px;
+            padding: 1.5rem;
         }
         .iframe-container {
             position: relative;
-            width: 85%;
+            /* 4:3 box that fills the card but never gets taller than the screen allows */
+            width: min(100%, calc((100vh - 15rem) * 4 / 3));
             aspect-ratio: 4 / 3;
             overflow: hidden;
-            margin: 1.5rem auto 0;
+            margin: 1rem auto 0;
         }
-        #mario-iframe {
+        #tutorial-iframe {
             display: block;
             width: 100%;
             height: 100%;
@@ -1026,14 +1021,13 @@
             <input id="hidden-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type the verse" />
             <div id="ref"></div>
         </div>
-        <!-- Mario Game UI -->
-        <div id="mario-ui" class="card">
-            <h2>Mario Teaches Typing</h2>
-            <p style="color: #888; font-size: 0.85em; margin: 8px 0;">
+        <!-- Bible Typing Tutorial UI (the game lives in its own file in the repo and is loaded on demand) -->
+        <div id="tutorial-ui" class="card">
+            <p style="color: #888; font-size: 0.85em; margin: 0;">
                 Click in the window to play • Press Menu (below) to exit
             </p>
             <div class="iframe-container">
-                <iframe id="mario-iframe" title="Mario Teaches Typing" src="about:blank" data-src="https://www.retrogames.cz/js-dos-622start.php?id2=1254&language=EN" allowfullscreen></iframe>
+                <iframe id="tutorial-iframe" title="Bible Typing Tutorial" src="about:blank" data-src="bible-typing-tutorial.html?embed=1" allowfullscreen></iframe>
             </div>
         </div>
     </div>
@@ -1048,7 +1042,7 @@
     <nav id="bottom-controls" aria-label="Main controls">
         <button type="button" id="progress-control" class="glass-pill">Progress</button>
         <button type="button" id="menu-control" class="glass-pill">Menu</button>
-        <button type="button" id="mario-control" class="glass-pill">Mario</button>
+        <button type="button" id="tutorial-control" class="glass-pill">Tutorial</button>
     </nav>
     <button type="button" id="profile-control" class="glass-pill"><span id="profile-name"></span></button>
     <button type="button" id="about-control" class="glass-pill">About</button>
@@ -1236,10 +1230,10 @@
 
             <section style="margin-bottom: 3.5rem;">
                 <h3 style="color: var(--accent); font-size: 1.3rem; margin-bottom: 0.9rem; font-weight: 600;">
-                    Mario Teaches Typing
+                    Bible Typing Tutorial
                 </h3>
                 <p style="margin: 0; color: var(--text-secondary);">
-                    Mario Teaches Typing is what I grew up using, and it is a fun way to learn proper typing technique. Use the “Student” dropdown in the game to create individual profiles to track progress.
+                    The Bible Typing Tutorial teaches proper typing technique through Bible stories, from David and Goliath to the Red Sea. Each lesson adds a new row of keys, building accuracy first, then speed, then both.
                 </p>
             </section>
 	    
@@ -1304,8 +1298,8 @@
                ===================================================================== */
             const mainMenu = $('main-menu');
             const gameUI = $('game-ui');
-            const marioUI = $('mario-ui');
-            const marioIframe = $('mario-iframe');
+            const tutorialUI = $('tutorial-ui');
+            const tutorialIframe = $('tutorial-iframe');
             const verseEl = $('verse');
             const inputEl = $('hidden-input');
             const refEl = $('ref');
@@ -1451,13 +1445,13 @@
             function showView(name) {
                 mainMenu.style.display = name === 'menu' ? 'block' : 'none';
                 gameUI.style.display = name === 'game' ? 'block' : 'none';
-                marioUI.style.display = name === 'mario' ? 'block' : 'none';
+                tutorialUI.style.display = name === 'tutorial' ? 'block' : 'none';
                 if (name !== 'game') {
                     clearTimeout(advanceTimer);
                     inputEl.disabled = true;
                 }
-                if (name !== 'mario' && marioIframe.src !== 'about:blank') {
-                    marioIframe.src = 'about:blank';   // stops the emulator (and its sound)
+                if (name !== 'tutorial' && tutorialIframe.src !== 'about:blank') {
+                    tutorialIframe.src = 'about:blank';   // stops the game (and its sound); progress is kept in localStorage
                 }
             }
             const openModal = el => { el.style.display = 'flex'; };
@@ -1990,14 +1984,23 @@
                 resumeMusic();
             });
 
-            $('mario-control').addEventListener('click', () => {
+            // Give keyboard focus to the tutorial so typing goes straight into the game.
+            function focusTutorial() {
+                tutorialIframe.focus();
+                try { tutorialIframe.contentWindow?.focus(); } catch { /* not loaded yet */ }
+            }
+            tutorialIframe.addEventListener('load', () => {
+                if (tutorialUI.style.display === 'block') focusTutorial();
+            });
+
+            $('tutorial-control').addEventListener('click', () => {
                 loadToken++;
-                showView('mario');
+                showView('tutorial');
                 pauseMusic();
-                if (marioIframe.src === 'about:blank') {
-                    marioIframe.src = marioIframe.dataset.src;   // only load the emulator when it's actually used
+                if (tutorialIframe.src === 'about:blank') {
+                    tutorialIframe.src = tutorialIframe.dataset.src;   // only load the tutorial when it's actually used
                 }
-                setTimeout(() => marioIframe.focus(), 100);
+                setTimeout(focusTutorial, 100);
             });
 
             $('progress-control').addEventListener('click', () => {
@@ -2008,9 +2011,8 @@
             $('about-control').addEventListener('click', () => openModal(aboutModal));
             $('close-about').addEventListener('click', () => closeModal(aboutModal));
 
-            // Escape closes the top-most modal, or leaves Mario when focus is back on this page.
-            // (Key presses inside the cross-origin Mario iframe never reach this page, which is why the
-            //  old "Press ESC to exit" never worked.)
+            // Escape closes the top-most modal, or leaves the Tutorial when focus is back on this page.
+            // (Key presses inside the tutorial iframe stay in the tutorial, where Escape returns to its own lesson menu.)
             document.addEventListener('keydown', e => {
                 if (e.key !== 'Escape') return;
                 const open = [...allModals].filter(m => m.style.display === 'flex');
@@ -2022,7 +2024,7 @@
                     else if (top === customAlertModal) customAlertOk.click();
                     else closeModal(top);
                     e.preventDefault();
-                } else if (marioUI.style.display === 'block') {
+                } else if (tutorialUI.style.display === 'block') {
                     $('menu-control').click();
                 }
             });
