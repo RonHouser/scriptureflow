@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bible Typing Tutorial</title>
+<title>Bible Typing Quest</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
@@ -35,140 +35,256 @@
   .view { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .view[hidden] { display: none; }
 
-  /* ---------- Menu ---------- */
-  header { text-align: center; padding: 22px 16px 6px; }
-  header h1 { font-family: Georgia, "Cormorant Garamond", serif; font-weight: 500; letter-spacing: .02em;
-    font-size: clamp(26px, 4vw, 40px); color: var(--accent); }
-  header p { color: var(--muted); font-size: 14px; margin-top: 6px; font-style: italic; }
-  #banner { width: 100%; height: 90px; display: block; }
-  main { flex: 1; display: grid; grid-template-columns: 220px 1fr; min-height: 0; border-top: 1px solid var(--line); }
-  nav { border-right: 1px solid var(--line); overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
-  .lesson-btn { text-align: left; font: inherit; color: var(--text); background: transparent;
-    border: 1px solid transparent; border-radius: 10px; padding: 10px 12px; cursor: pointer;
-    display: flex; flex-direction: column; gap: 2px; }
-  .lesson-btn small { color: var(--muted); font-size: 12px; }
-  .lesson-btn:hover { background: var(--panel-2); }
-  .lesson-btn[aria-selected="true"] { background: var(--panel-2); border-color: var(--accent); }
-  .lesson-btn.locked { opacity: .45; }
-  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  #detail { padding: 18px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
-  #detail h2 { font-size: 22px; }
-  #detail .story { color: var(--muted); font-size: 14px; font-style: italic; }
-  .keys { display: flex; gap: 6px; flex-wrap: wrap; }
-  .key { min-width: 34px; height: 34px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 6px; background: #1f2329; border: 1px solid var(--line); font-weight: 700; }
-  .modules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .module { font: inherit; color: var(--text); text-align: left; background: #24282e; border: 1px solid var(--line);
-    border-radius: 12px; padding: 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px;
-    transition: transform .15s ease, border-color .15s ease; }
-  .module:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent); }
-  .module:disabled { cursor: not-allowed; opacity: .5; }
-  .module .tag { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
-  .module h3 { font-size: 16px; }
-  .module p { font-size: 13px; color: var(--muted); line-height: 1.4; }
-  .module .status { margin-top: auto; font-size: 12px; color: var(--gold); }
-  .module .status.done { color: var(--ok); }
-  footer { border-top: 1px solid var(--line); padding: 10px 16px; display: flex; gap: 10px; justify-content: center; }
-  .pill { font: inherit; font-size: 13px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line);
-    border-radius: 999px; padding: 7px 16px; cursor: pointer; }
-  .pill:hover { border-color: var(--accent); }
-  #toast { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); background: #111; color: var(--text);
+  /* =====================================================================
+     MENU — game style: Title screen → World map → Level select
+     ===================================================================== */
+  #menu-view { position: relative; overflow: hidden; background: #0a1222; }
+  #menu-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
+  .screen { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; min-height: 0; }
+  .screen[hidden] { display: none; }
+  .screen.enter { animation: scrIn .35s ease both; }
+  @keyframes scrIn { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .screen.enter, .play-btn, .next-flag, .level.next, .press-hint { animation: none !important; } }
+
+  /* top HUD bar */
+  .hud { display: flex; align-items: center; gap: 8px; padding: 10px 14px; flex-shrink: 0; }
+  .hud .grow { flex: 1; min-width: 0; }
+  .hud-title { text-align: center; font-weight: 900; font-size: clamp(15px, 2.2vw, 20px); letter-spacing: .03em; line-height: 1.1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
+  .hud-title small { display: block; font-weight: 700; font-size: 11px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; }
+  .icon-btn { font: inherit; color: var(--text); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+    border-radius: 12px; height: 38px; min-width: 38px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; cursor: pointer; font-weight: 800; font-size: 14px; white-space: nowrap; flex-shrink: 0;
+    transition: background .15s, transform .15s, border-color .15s; }
+  .icon-btn:hover { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.35); transform: translateY(-1px); }
+  .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .star-chip { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 13px; border-radius: 999px; flex-shrink: 0;
+    background: rgba(233,196,106,.13); border: 1px solid rgba(233,196,106,.5); color: var(--gold); font-weight: 900; font-size: 15px; white-space: nowrap; }
+  .star-chip svg { width: 18px; height: 18px; fill: var(--gold); }
+  .player-chip { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 4px; border-radius: 999px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); font-weight: 800; font-size: 14px; min-width: 0; }
+  .player-chip span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
+    background: linear-gradient(180deg, #8fbcff, #4d7fd6); color: #0b1424; font-weight: 900; font-size: 14px; }
+  .menu-hint { text-align: center; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.45);
+    padding: 0 12px 10px; flex-shrink: 0; }
+  button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+  /* ---------- title screen ---------- */
+  .title-main { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(6px, 1.8vh, 16px); text-align: center; padding: 0 16px 14px; }
+  .logo { line-height: .95; }
+  .logo .pre { display: block; font-size: clamp(12px, 1.8vw, 17px); letter-spacing: .5em; padding-left: .5em; font-weight: 900;
+    color: var(--gold); text-transform: uppercase; }
+  .logo .main { display: block; font-family: Georgia, "Times New Roman", serif; font-weight: 700; letter-spacing: .01em;
+    font-size: clamp(30px, min(7.4vw, 12vh), 76px); color: #fff;
+    background: linear-gradient(180deg, #ffffff 15%, #a9c9ff 90%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 4px 18px rgba(111,168,255,.4)); padding: 0 .05em .08em; }
+  #banner { width: min(620px, 94%); height: clamp(54px, 21vh, 160px); display: block; }
+  .play-btn { font: inherit; font-size: clamp(18px, 2.6vw, 24px); font-weight: 900; letter-spacing: .14em; color: #2a1c00; cursor: pointer;
+    background: linear-gradient(180deg, #ffe39a, #e9b949); border: none; border-radius: 16px; padding: 13px 46px;
+    box-shadow: 0 6px 0 #a87a1a, 0 10px 30px rgba(233,196,106,.35); transition: transform .08s, box-shadow .08s;
+    animation: glowPulse 2.2s ease-in-out infinite; }
+  .play-btn:hover { filter: brightness(1.06); }
+  .play-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #a87a1a, 0 6px 20px rgba(233,196,106,.3); }
+  @keyframes glowPulse { 50% { box-shadow: 0 6px 0 #a87a1a, 0 10px 46px rgba(233,196,106,.7); } }
+  .press-hint { font-size: 11.5px; letter-spacing: .24em; text-transform: uppercase; color: rgba(255,255,255,.6); animation: fadeBlink 1.8s ease-in-out infinite; }
+  @keyframes fadeBlink { 50% { opacity: .25; } }
+  .title-verse { font-style: italic; color: var(--muted); font-size: 13px; max-width: 540px; }
+
+  /* ---------- world map ---------- */
+  #map { position: relative; flex: 1; min-height: 0; margin: 4px 14px 4px; display: grid; align-items: center; justify-items: center; }
+  #map-path { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  #map-path .trail { fill: none; stroke: rgba(255,255,255,.28); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 1 11; }
+  #map-path .trail.gold { stroke: var(--gold); stroke-dasharray: none; stroke-width: 4; opacity: .85; filter: drop-shadow(0 0 4px rgba(233,196,106,.6)); }
+  .node { --bs: clamp(50px, min(10.5vw, 14.5vh), 96px); position: relative; z-index: 1; font: inherit; color: var(--text); background: none;
+    border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 8px; border-radius: 16px; }
+  .badge { width: var(--bs); height: var(--bs); border-radius: 50%; display: grid; place-items: center; position: relative; flex-shrink: 0;
+    background: radial-gradient(circle at 34% 28%, var(--cl) 0%, var(--c) 48%, var(--cd) 100%);
+    box-shadow: 0 5px 0 var(--cd), 0 10px 22px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.35);
+    transition: transform .18s ease, box-shadow .18s ease; }
+  .badge > svg { width: 60%; height: 60%; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 2px 0 rgba(0,0,0,.25)); }
+  .badge > svg .fill { fill: #fff; }
+  .node:hover .badge, .node.sel .badge { transform: translateY(-4px) scale(1.08); }
+  .node.sel .badge { box-shadow: 0 5px 0 var(--cd), 0 0 0 4px rgba(255,255,255,.9), 0 0 30px var(--c); }
+  .node:focus-visible { outline: none; }
+  .badge .num { position: absolute; top: -3px; left: -3px; width: 26px; height: 26px; border-radius: 50%; background: #0b1424;
+    border: 2px solid #fff; font-weight: 900; font-size: 13px; display: grid; place-items: center; color: #fff; }
+  .node.cleared .badge::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 3px solid var(--gold);
+    box-shadow: 0 0 12px rgba(233,196,106,.6); }
+  .badge .crown { position: absolute; top: -12px; right: -8px; width: 30px; height: 30px; transform: rotate(16deg); }
+  .badge .crown svg { width: 100%; height: 100%; fill: var(--gold); stroke: #7a5a12; stroke-width: 1.5; stroke-linejoin: round; }
+  .node .name { font-weight: 900; font-size: clamp(13px, 1.7vw, 16px); text-shadow: 0 2px 6px rgba(0,0,0,.7); margin-top: 4px; white-space: nowrap; }
+  .node .sub { font-size: 11.5px; color: #b5c0d0; text-shadow: 0 2px 6px rgba(0,0,0,.7); white-space: nowrap; }
+  .stars { display: inline-flex; gap: 2px; }
+  .stars svg { width: 16px; height: 16px; fill: rgba(255,255,255,.2); }
+  .stars svg.on { fill: var(--gold); filter: drop-shadow(0 0 3px rgba(233,196,106,.7)); }
+  .next-flag { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); z-index: 3; background: var(--gold); color: #2a1c00;
+    font-weight: 900; font-size: 11px; letter-spacing: .12em; padding: 3px 8px; border-radius: 6px; white-space: nowrap;
+    box-shadow: 0 3px 8px rgba(0,0,0,.4); animation: bob 1.1s ease-in-out infinite; pointer-events: none; }
+  .next-flag::after { content: ''; position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: var(--gold); border-bottom: 0; }
+  @keyframes bob { 50% { transform: translate(-50%, -4px); } }
+
+  /* ---------- level select ---------- */
+  .world-hero { display: flex; align-items: center; gap: 16px; padding: 2px 18px 12px; flex-shrink: 0; }
+  .world-hero .badge { --bs: clamp(46px, 11vh, 76px); }
+  .hero-text { min-width: 0; }
+  .hero-text .h2 { display: block; font-size: clamp(19px, 2.8vw, 28px); font-weight: 900; line-height: 1.1; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+  .hero-text .story { display: block; color: #b5c0d0; font-size: 13px; font-style: italic; margin-top: 2px; }
+  .keycaps { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+  .kc { min-width: 27px; height: 27px; padding: 0 7px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #454c58, #2c313a); border: 1px solid rgba(255,255,255,.2); box-shadow: 0 3px 0 #12151a;
+    font-weight: 800; font-size: 13px; color: #fff; }
+  .keytext { font-size: 12px; font-weight: 700; color: #cfd8e6; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+    padding: 4px 9px; border-radius: 8px; align-self: flex-start; }
+  .levels { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: minmax(0, 340px);
+    align-content: center; gap: 14px; padding: 4px 18px 12px; }
+  .level { --t: #6fa8ff; --tg: rgba(111,168,255,.35); position: relative; font: inherit; color: var(--text); text-align: left; cursor: pointer;
+    border-radius: 18px; border: 2px solid rgba(255,255,255,.12); overflow: hidden; min-height: 0; display: flex; flex-direction: column;
+    background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)), #152036;
+    box-shadow: 0 6px 0 rgba(0,0,0,.4); transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+  .level.t1 { --t: #ffb347; --tg: rgba(255,179,71,.35); }
+  .level.t2 { --t: #ff7a6b; --tg: rgba(255,122,107,.4); background: radial-gradient(120% 80% at 50% 0%, rgba(255,122,107,.18), transparent 60%), linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)), #1c1a2e; }
+  .level:hover, .level:focus-visible { transform: translateY(-5px); border-color: var(--t); box-shadow: 0 11px 0 rgba(0,0,0,.4), 0 0 28px var(--tg); outline: none; }
+  .level:disabled { cursor: not-allowed; opacity: .5; transform: none; }
+  .level.next { animation: nextGlow 1.8s ease-in-out infinite; }
+  @keyframes nextGlow { 50% { box-shadow: 0 6px 0 rgba(0,0,0,.4), 0 0 0 3px var(--gold), 0 0 26px rgba(233,196,106,.5); } }
+  .band { display: flex; align-items: center; gap: 7px; padding: 9px 12px; background: var(--t); color: #10182a; font-weight: 900;
+    letter-spacing: .1em; font-size: 12px; text-transform: uppercase; flex-shrink: 0; }
+  .level.t2 .band { background: linear-gradient(90deg, #ff7a6b, #e9c46a); }
+  .band svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .band .star { margin-left: auto; width: 20px; height: 20px; fill: rgba(16,24,42,.25); stroke: none; }
+  .band .star.on { fill: #fff; filter: drop-shadow(0 0 4px rgba(255,255,255,.8)); }
+  .level .body { padding: 10px 13px 4px; display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0; overflow: hidden; }
+  .level .lv { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--t); }
+  .level .h3 { display: block; font-size: clamp(16px, 2vw, 21px); font-weight: 900; line-height: 1.15; }
+  .level .desc { font-size: 12.5px; color: #b9c3d2; line-height: 1.38; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .level .keycaps { margin-top: 2px; }
+  .level .kc { min-width: 24px; height: 24px; font-size: 12px; padding: 0 6px; }
+  .level .foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px 12px; flex-shrink: 0; }
+  .level .status { font-size: 11.5px; font-weight: 800; line-height: 1.25; min-width: 0; }
+  .level .status .ok { color: var(--ok); display: block; letter-spacing: .06em; }
+  .level .status .best { color: var(--gold); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .level .status .nx { color: var(--gold); letter-spacing: .12em; }
+  .level .go { font-weight: 900; letter-spacing: .1em; font-size: 13px; padding: 8px 14px; border-radius: 10px; background: var(--t); color: #10182a;
+    box-shadow: 0 3px 0 rgba(0,0,0,.4); white-space: nowrap; flex-shrink: 0; }
+  .level .keynum { position: absolute; right: 12px; bottom: 58px; width: clamp(40px, 9vh, 76px); height: clamp(40px, 9vh, 76px); pointer-events: none; opacity: .16; }
+  .level .keynum svg { width: 100%; height: 100%; fill: none; stroke: var(--t); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  @media (max-height: 520px) { .level .keynum { display: none; } }
+
+  #toast { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); background: #111; color: var(--text);
     padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 60; }
   #toast.show { opacity: 1; }
 
   /* ---------- Game ---------- */
-  .topbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
-  #game-title { flex: 1; text-align: center; font-size: 14px; color: var(--muted); }
-  #game-title b { color: var(--text); }
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: rgba(0,0,0,.18); }
+  #game-title { flex: 1; min-width: 0; text-align: center; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #game-title b { color: var(--text); font-size: 16px; }
+  #game-title .gt-chip { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 900;
+    letter-spacing: .1em; text-transform: uppercase; color: #10182a; vertical-align: 2px; }
   .stage { flex: 1; position: relative; min-height: 0; }
   #stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   #overlay { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; gap: 14px; text-align: center; padding: 24px; background: rgba(20, 23, 28, 0.82);
+    justify-content: center; gap: 14px; text-align: center; padding: 24px; background: rgba(12, 16, 26, 0.86);
     opacity: 0; pointer-events: none; transition: opacity .5s ease; }
   #overlay.show { opacity: 1; pointer-events: auto; }
   #ov-title { font-size: clamp(40px, 8vw, 84px); line-height: 1; color: #fff; }
+  #overlay.win #ov-title { background: linear-gradient(180deg, #fff3c4 10%, #e9b949 90%); -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 20px rgba(233,196,106,.45)); }
   #ov-verse { font-size: clamp(15px, 2vw, 20px); font-style: italic; color: var(--text); max-width: 680px; }
   #ov-stats { font-size: 15px; color: var(--muted); line-height: 1.6; }
   #ov-stats .hi { color: var(--gold); font-weight: 700; }
-  .ov-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
-  .ov-btns button { font: inherit; font-size: 17px; font-weight: 700; border-radius: 999px; padding: 11px 28px; cursor: pointer;
-    border: 1px solid var(--line); background: var(--panel-2); color: var(--text); }
-  .ov-btns button.primary { background: var(--accent); color: #0b1424; border-color: var(--accent); }
+  .ov-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  .ov-btns button { font: inherit; font-size: 16px; font-weight: 900; letter-spacing: .06em; border-radius: 14px; padding: 11px 24px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.2); background: #33405a; color: var(--text); box-shadow: 0 5px 0 #1a2131; transition: transform .08s, box-shadow .08s; }
+  .ov-btns button:hover { filter: brightness(1.12); }
+  .ov-btns button:active { transform: translateY(3px); box-shadow: 0 2px 0 #1a2131; }
+  .ov-btns button.primary { background: linear-gradient(180deg, #ffe39a, #e9b949); color: #2a1c00; border-color: transparent; box-shadow: 0 5px 0 #a87a1a; }
+  .ov-btns button.primary:active { box-shadow: 0 2px 0 #a87a1a; }
   .ov-btns button[hidden] { display: none; }
   #overlay .small { font-size: 12px; color: var(--muted); }
 
-  /* Shorter windows (e.g. inside the main site): tighten the menu so everything fits without scrolling */
-  @media (max-height: 760px) {
-    header { padding: 12px 16px 2px; }
-    header h1 { font-size: clamp(24px, 3.4vw, 32px); }
-    header p { font-size: 13px; margin-top: 2px; }
-    #banner { height: 64px; }
-    nav { padding: 8px; gap: 4px; }
-    .lesson-btn { padding: 5px 9px; font-size: 14px; gap: 0; }
-    .lesson-btn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lesson-btn small { font-size: 11px; }
-    nav { gap: 2px; }
-    #detail { padding: 12px 18px; gap: 10px; }
-    #detail h2 { font-size: 20px; }
-    .key { min-width: 30px; height: 30px; }
-    .module { padding: 10px 12px; gap: 4px; }
-    .module p { font-size: 12px; line-height: 1.35; }
-    footer { padding: 7px 16px; }
-    .pill { padding: 6px 14px; }
-  }
+  /* ---------- shorter windows (e.g. inside the main site) ---------- */
   @media (max-height: 560px) {
-    header { padding: 8px 16px 0; }
-    header p { font-size: 12px; }
-    #banner { height: 50px; }
-    .lesson-btn { padding: 4px 9px; }
-    .lesson-btn span { white-space: normal; line-height: 1.2; }
+    .hud { padding: 8px 12px; }
+    .icon-btn, .star-chip, .player-chip { height: 34px; }
+    .level .desc { -webkit-line-clamp: 2; }
+    .world-hero { padding-bottom: 8px; }
+    .title-verse { display: none; }
   }
-  @media (max-height: 470px) {
-    #banner { display: none; }
-    header p { display: none; }
-    .lesson-btn { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 6px; }
-    .lesson-btn span { white-space: nowrap; }
-    .lesson-btn small { flex-shrink: 0; }
-    .module p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  @media (max-height: 460px) {
+    .menu-hint, .press-hint { display: none; }
+    .world-hero .keycaps, .node .sub, .level .keynum { display: none; }
+    .level .desc { -webkit-line-clamp: 2; }
+    .levels { padding-bottom: 10px; }
+    .level .body { padding-top: 8px; }
+    .band { padding: 7px 11px; }
   }
-  /* Medium widths: keep the side list, just narrower */
-  @media (max-width: 900px) {
-    main { grid-template-columns: 170px 1fr; }
-    .lesson-btn { font-size: 14px; }
-  }
-  @media (max-width: 560px) {
-    #app { aspect-ratio: auto; height: calc(100vh - 48px); }
-    main { grid-template-columns: 1fr; }
-    nav { flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--line); }
-    .lesson-btn { min-width: 150px; }
-    .modules { grid-template-columns: 1fr; }
+  @media (max-height: 400px) { .level .desc { display: none; } }
+  @media (max-width: 640px) {
+    .levels { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: auto; align-content: start; overflow-y: auto; }
+    .level .desc { -webkit-line-clamp: 2; }
+    .hud-title small, .player-chip span:last-child { display: none; }
+    .player-chip { padding-right: 4px; }
   }
 </style>
 </head>
 <body>
 <div id="app">
   <section class="view" id="menu-view">
-    <header>
-      <h1>Bible Typing Tutorial</h1>
-      <p>“Whatsoever thy hand findeth to do, do it with thy might.” — Ecclesiastes 9:10</p>
-    </header>
-    <canvas id="banner" aria-hidden="true"></canvas>
-    <main>
-      <nav id="lessons" role="tablist" aria-label="Lessons"></nav>
-      <section id="detail" aria-live="polite"></section>
-    </main>
-    <footer>
-      <button type="button" class="pill" id="btn-progress">Progress</button>
-      <button type="button" class="pill" id="btn-sound-menu">Sound: On</button>
-      <button type="button" class="pill" id="btn-reset">Reset Progress</button>
-    </footer>
+    <canvas id="menu-bg" aria-hidden="true"></canvas>
+
+    <!-- TITLE SCREEN -->
+    <div class="screen" id="scr-title">
+      <div class="hud">
+        <span class="player-chip" title="Player"><span class="avatar" id="player-initial"></span><span id="player-name"></span></span>
+        <span class="grow"></span>
+        <span class="star-chip js-stars"></span>
+        <button type="button" class="icon-btn js-sound"></button>
+      </div>
+      <div class="title-main">
+        <h1 class="logo"><span class="pre">Bible</span><span class="main">Typing Quest</span></h1>
+        <canvas id="banner" aria-hidden="true"></canvas>
+        <button type="button" class="play-btn" id="btn-play">PLAY ▶</button>
+        <p class="press-hint">Press Enter to start</p>
+        <p class="title-verse">“Whatsoever thy hand findeth to do, do it with thy might.” — Ecclesiastes 9:10</p>
+      </div>
+    </div>
+
+    <!-- WORLD MAP -->
+    <div class="screen" id="scr-map" hidden>
+      <div class="hud">
+        <button type="button" class="icon-btn" id="btn-home" aria-label="Title screen" title="Title screen"></button>
+        <div class="grow hud-title">World Map<small>Choose your adventure</small></div>
+        <span class="star-chip js-stars"></span>
+        <button type="button" class="icon-btn js-sound"></button>
+        <button type="button" class="icon-btn" id="btn-reset" aria-label="Reset progress" title="Reset progress"></button>
+      </div>
+      <div id="map" role="group" aria-label="Worlds"><svg id="map-path" aria-hidden="true"></svg></div>
+      <p class="menu-hint">Arrow keys to choose a world · Enter to open</p>
+    </div>
+
+    <!-- LEVEL SELECT -->
+    <div class="screen" id="scr-world" hidden>
+      <div class="hud">
+        <button type="button" class="icon-btn" id="btn-map"></button>
+        <div class="grow hud-title" id="world-hud-title"></div>
+        <span class="star-chip" id="world-stars"></span>
+        <button type="button" class="icon-btn js-sound"></button>
+      </div>
+      <div class="world-hero" id="world-hero"></div>
+      <div class="levels" id="levels" role="group" aria-label="Levels"></div>
+      <p class="menu-hint">Press 1 · 2 · 3 to play · Esc for the map</p>
+    </div>
   </section>
 
   <section class="view" id="game-view" hidden>
     <div class="topbar">
-      <button type="button" class="pill" id="btn-back">← Menu</button>
+      <button type="button" class="icon-btn" id="btn-back"></button>
       <div id="game-title"></div>
-      <button type="button" class="pill" id="btn-sound">Sound: On</button>
+      <button type="button" class="icon-btn js-sound"></button>
     </div>
     <div class="stage">
       <canvas id="stage"></canvas>
@@ -177,14 +293,15 @@
         <p id="ov-verse"></p>
         <p id="ov-stats"></p>
         <div class="ov-btns">
-          <button type="button" id="ov-next">Next Module ▶</button>
-          <button type="button" id="ov-retry">Try Again</button>
-          <button type="button" id="ov-menu">Menu</button>
+          <button type="button" id="ov-next">Next Level ▶</button>
+          <button type="button" id="ov-retry">Try Again ↻</button>
+          <button type="button" id="ov-menu">Level Select</button>
         </div>
-        <p class="small">Enter = continue · Esc = menu</p>
+        <p class="small">Enter = continue · Esc = level select</p>
       </div>
     </div>
   </section>
+
   <div id="toast" role="status"></div>
 </div>
 <script>
@@ -598,7 +715,7 @@ let lastFrame = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
   if (UI.view === 'game') { E.update(dt); E.render(); }
-  else if (UI.view === 'menu') Banner.draw(now);
+  else if (UI.view === 'menu') { MenuBG.draw(now); if (UI.screen === 'title') Banner.draw(now); }
   requestAnimationFrame(frame);
 }
 new ResizeObserver(() => E.resize()).observe(canvas);
@@ -2402,21 +2519,99 @@ const LESSONS = [
 const ORDER = LESSONS.flatMap(L => L.modules.map(m => m.id));
 
 const $ = id => document.getElementById(id);
+
+/* ---------- worlds: look & feel ---------- */
+const WORLDS = [
+  { color: '#f4a261', icon: 'sling' }, { color: '#9b7bff', icon: 'lyre' }, { color: '#2ec4b6', icon: 'ark' },
+  { color: '#e76f51', icon: 'horn' }, { color: '#7cc142', icon: 'bread' }, { color: '#3a86ff', icon: 'sea' }
+];
+const LEVEL_TYPES = [
+  { name: 'Accuracy', icon: 'target', color: '#6fa8ff' },
+  { name: 'Speed', icon: 'bolt', color: '#ffb347' },
+  { name: 'Boss', icon: 'crown', color: '#ff7a6b' }
+];
+const svg = (inner, vb = '0 0 48 48') => `<svg viewBox="${vb}" aria-hidden="true">${inner}</svg>`;
+const ICONS = {
+  sling: svg('<path d="M9 41 L27 21"/><path d="M14 43 L31 24"/><circle class="fill" cx="31" cy="19" r="5.5"/><path d="M8 21 A17 17 0 0 1 25 5"/><path d="M41 27 A17 17 0 0 1 30 41" opacity=".6"/>'),
+  lyre: svg('<path d="M15 40 Q5 24 12 8"/><path d="M33 40 Q43 24 36 8"/><path d="M9 11 L39 11"/><path d="M13 40 L35 40"/><path d="M19 13 L19 38"/><path d="M24 13 L24 38"/><path d="M29 13 L29 38"/>'),
+  ark: svg('<path d="M5 29 L43 29 L37 39 L11 39 Z"/><path d="M15 29 L15 20 L33 20 L33 29"/><path d="M12 20 L24 12 L36 20"/><path d="M4 44 q5 -3 10 0 t10 0 t10 0 t10 0"/>'),
+  horn: svg('<path d="M7 34 Q22 38 31 24 Q35 17 37 9"/><path d="M11 39 Q27 42 36 27"/><ellipse cx="38" cy="10" rx="4.5" ry="3" transform="rotate(30 38 10)"/><path d="M7 34 L11 39"/><path d="M42 20 q3 3 0 7" opacity=".7"/><path d="M45 16 q5 6 0 14" opacity=".45"/>'),
+  bread: svg('<ellipse cx="17" cy="31" rx="11" ry="7.5"/><path d="M12 26 l3 9 M18 25 l3 10"/><path d="M27 18 q8 -7 15 0 q-7 7 -15 0 Z"/><path d="M27 18 l-6 -5 l0 10 Z"/><circle class="fill" cx="38" cy="17" r="1.3"/>'),
+  sea: svg('<path d="M5 42 L5 20 Q11 11 17 19 L17 42"/><path d="M31 42 L31 19 Q37 11 43 20 L43 42"/><path d="M24 41 L24 9"/><path d="M8 27 q3 -2 6 0 M34 27 q3 -2 6 0 M8 34 q3 -2 6 0 M34 34 q3 -2 6 0" opacity=".7"/>'),
+  target: svg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>', '0 0 24 24'),
+  bolt: svg('<path d="M13 2 L4 14 L11 14 L10 22 L20 9 L13 9 Z"/>', '0 0 24 24'),
+  crown: svg('<path d="M3 18 L5 7 L10 12 L12 5 L14 12 L19 7 L21 18 Z"/><path d="M3 21 L21 21"/>', '0 0 24 24'),
+  crownFill: svg('<path d="M3 18 L5 7 L10 12 L12 5 L14 12 L19 7 L21 18 Z"/>', '0 0 24 24'),
+  star: svg('<path d="M12 2.5 L14.9 8.6 L21.5 9.3 L16.5 13.8 L17.9 20.4 L12 17 L6.1 20.4 L7.5 13.8 L2.5 9.3 L9.1 8.6 Z"/>', '0 0 24 24'),
+  soundOn: svg('<path d="M4 9 L8 9 L13 5 L13 19 L8 15 L4 15 Z"/><path d="M16.5 9 q2 3 0 6"/><path d="M19 6.5 q4.5 5.5 0 11"/>', '0 0 24 24'),
+  soundOff: svg('<path d="M4 9 L8 9 L13 5 L13 19 L8 15 L4 15 Z"/><path d="M17 9.5 L22 14.5 M22 9.5 L17 14.5"/>', '0 0 24 24'),
+  home: svg('<path d="M3 11 L12 4 L21 11"/><path d="M6 10 L6 20 L18 20 L18 10"/><path d="M10 20 L10 14 L14 14 L14 20"/>', '0 0 24 24'),
+  reset: svg('<path d="M4 12 A8 8 0 1 0 7 5.8"/><path d="M4 4 L4 9 L9 9"/>', '0 0 24 24'),
+  back: svg('<path d="M15 5 L8 12 L15 19"/>', '0 0 24 24')
+};
+const starSvg = on => ICONS.star.replace('<svg', `<svg class="${on ? 'on' : ''}"`);
+
+function shade(hex, amt) {                          // amt: -1 (black) … 1 (white)
+  const n = parseInt(hex.slice(1), 16), t = amt < 0 ? 0 : 255, p = Math.abs(amt);
+  const ch = v => Math.round((t - v) * p + v);
+  return `rgb(${ch(n >> 16)},${ch((n >> 8) & 255)},${ch(n & 255)})`;
+}
+function paint(el, hex) { el.style.setProperty('--c', hex); el.style.setProperty('--cl', shade(hex, 0.45)); el.style.setProperty('--cd', shade(hex, -0.45)); }
+const escHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const worldOf = id => LESSONS.findIndex(L => L.modules.some(m => m.id === id));
+const isDone = id => !!Progress.get(id).done;
+const worldStars = i => LESSONS[i].modules.filter(m => isDone(m.id)).length;
+const totalStars = () => ORDER.filter(isDone).length;
+const nextUp = () => ORDER.find(id => GAMES[id] && !isDone(id)) || null;
+const storyName = L => L.story.split(' — ')[0];
+const handOf = (m, j) => m.kind.includes('Hand') ? m.kind.split(' · ')[0] : 'Both Hands';
+function keysHtml(keys) {
+  const t = keys.split(' ');
+  return t.every(k => k.length <= 2) ? `<span class="keycaps">${t.map(k => `<span class="kc">${escHtml(k)}</span>`).join('')}</span>`
+    : `<span class="keytext">${escHtml(keys)}</span>`;
+}
+
+/* ---------- menu sounds ---------- */
+function uiSound(kind) {
+  if (!Sound.on) return;
+  if (kind === 'move') Sound.pluck(659.25, 0.06, 0.25);
+  else if (kind === 'back') Sound.pluck(392, 0.07, 0.3);
+  else if (kind === 'select') [587.33, 739.99, 880].forEach((f, i) => setTimeout(() => Sound.pluck(f, 0.09, 0.7), i * 70));
+}
+
+/* ---------- screens ---------- */
 const UI = {
-  view: 'menu', overlayOpen: false, selected: 0,
-  showMenu() {
-    this.view = 'menu'; this.overlayOpen = false; E.mod = null; E.state = 'idle';
-    $('overlay').classList.remove('show');
+  view: 'menu', screen: 'title', overlayOpen: false, selected: 0,
+  go(screen) {
+    this.view = 'menu'; this.screen = screen;
     $('game-view').hidden = true; $('menu-view').hidden = false;
-    Banner.size(); renderNav(); renderDetail();
+    ['title', 'map', 'world'].forEach(s => {
+      const el = $('scr-' + s), on = s === screen;
+      el.hidden = !on;
+      if (on) { el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter'); }
+    });
+    refreshHud();
+    if (screen === 'map') renderMap();
+    if (screen === 'world') renderWorld();
+    if (screen === 'title') Banner.size();
+    focusScreen();
+  },
+  // Called by the game (Esc / overlay "Level Select" / back button): return to that world's level select.
+  showMenu() {
+    const id = E.mod && E.mod.id;
+    this.overlayOpen = false; E.mod = null; E.state = 'idle';
+    $('overlay').classList.remove('show');
+    if (id) this.selected = worldOf(id);
+    this.go(id ? 'world' : this.screen);
   },
   showGame(mod) {
     this.view = 'game'; this.overlayOpen = false;
     $('overlay').classList.remove('show');
     $('menu-view').hidden = true; $('game-view').hidden = false;
-    const L = LESSONS.find(l => l.modules.some(m => m.id === mod.id));
-    const i = L.modules.findIndex(m => m.id === mod.id);
-    $('game-title').innerHTML = `${L.title} · Module ${i + 1} — <b>${mod.title}</b>`;
+    const w = worldOf(mod.id), L = LESSONS[w], j = L.modules.findIndex(m => m.id === mod.id), T = LEVEL_TYPES[j] || LEVEL_TYPES[0];
+    this.selected = w;
+    $('game-title').innerHTML = `World ${w + 1} · Level ${j + 1} — <b>${escHtml(mod.title)}</b><span class="gt-chip" style="background:${T.color}">${T.name}</span>`;
+    $('btn-back').innerHTML = `${ICONS.back}<span>World ${w + 1}</span>`;
     if (document.activeElement) document.activeElement.blur();
   },
   showOverlay(res) {
@@ -2433,55 +2628,227 @@ const UI = {
     $('ov-next').hidden = !showNext;
     $('ov-next').classList.toggle('primary', !!showNext);
     $('ov-retry').classList.toggle('primary', !showNext);
+    $('overlay').classList.toggle('win', !!res.win);
+    if (res.win) uiSound('select');
     $('overlay').classList.add('show');
   },
   primary() { if (!$('ov-next').hidden) this.next(); else this.retry(); },
   retry() { E.start(E.mod); },
   next() { const n = ORDER[ORDER.indexOf(E.mod.id) + 1]; if (n && GAMES[n]) E.start(GAMES[n]); }
 };
+
+function focusScreen() {
+  let el = null;
+  if (UI.screen === 'title') el = $('btn-play');
+  else if (UI.screen === 'map') el = $('map').querySelector(`.node[data-i="${UI.selected}"]`);
+  else if (UI.screen === 'world') el = $('levels').querySelector('.level.next:not(:disabled)') || $('levels').querySelector('.level:not(:disabled)');
+  if (el) el.focus({ preventScroll: true });
+}
+
+function refreshHud() {
+  const name = PROFILE || 'Player';
+  $('player-name').textContent = name;
+  $('player-initial').textContent = name.trim().charAt(0).toUpperCase() || 'P';
+  document.querySelectorAll('.js-stars').forEach(el => el.innerHTML = `${ICONS.star}<span>${totalStars()} / ${ORDER.length}</span>`);
+  syncSound();
+}
+function syncSound() {
+  document.querySelectorAll('.js-sound').forEach(b => {
+    b.innerHTML = Sound.on ? ICONS.soundOn : ICONS.soundOff;
+    b.setAttribute('aria-label', Sound.on ? 'Sound on' : 'Sound off');
+    b.title = Sound.on ? 'Sound: On' : 'Sound: Off';
+    b.setAttribute('aria-pressed', String(Sound.on));
+  });
+}
+document.querySelectorAll('.js-sound').forEach(b => b.addEventListener('click', e => {
+  Sound.set(!Sound.on); syncSound(); uiSound('move');
+  if (UI.view === 'game') e.currentTarget.blur();          // keep typing keys going to the game
+}));
+
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1800); }
+
+/* ---------- world map ---------- */
+function renderMap() {
+  const map = $('map');
+  map.querySelectorAll('.node').forEach(n => n.remove());
+  const nx = nextUp(), nxW = nx ? worldOf(nx) : -1;
+  LESSONS.forEach((L, i) => {
+    const W = WORLDS[i], st = worldStars(i), n = L.modules.length, cleared = n > 0 && st === n;
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.i = i;
+    b.className = 'node' + (i === UI.selected ? ' sel' : '') + (cleared ? ' cleared' : '');
+    paint(b, W.color);
+    b.setAttribute('aria-label', `World ${i + 1}: ${L.subtitle}, ${storyName(L)}. ${st} of ${n} stars${i === nxW ? '. Up next' : ''}`);
+    b.innerHTML = `${i === nxW ? '<span class="next-flag">NEXT</span>' : ''}
+      <span class="badge">${ICONS[W.icon]}<span class="num">${i + 1}</span>${cleared ? `<span class="crown">${ICONS.crownFill}</span>` : ''}</span>
+      <span class="name">${escHtml(L.subtitle)}</span><span class="sub">${escHtml(storyName(L))}</span>
+      <span class="stars">${L.modules.map((m, k) => starSvg(k < st)).join('')}</span>`;
+    b.addEventListener('click', () => { UI.selected = i; uiSound('select'); UI.go('world'); });
+    b.addEventListener('focus', () => { if (UI.selected !== i) { UI.selected = i; uiSound('move'); } markSel(); });
+    b.addEventListener('mouseenter', () => { UI.selected = i; markSel(); });
+    map.appendChild(b);
+  });
+  layoutMap();
+}
+function markSel() { $('map').querySelectorAll('.node').forEach(n => n.classList.toggle('sel', +n.dataset.i === UI.selected)); }
+
+// Snake layout (3 across, or 2 across on narrow screens) so the trail winds like a game map.
+function layoutMap() {
+  const map = $('map'), nodes = [...map.querySelectorAll('.node')];
+  if (!nodes.length || !map.clientWidth) return;
+  const cols = map.clientWidth < 540 ? 2 : 3, rows = Math.ceil(nodes.length / cols);
+  map.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  map.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;
+  nodes.forEach((n, i) => { const r = Math.floor(i / cols), c = i % cols; n.style.gridRow = r + 1; n.style.gridColumn = r % 2 ? cols - c : c + 1; });
+  drawTrail();
+}
+function drawTrail() {
+  const map = $('map'), svgEl = $('map-path'), w = map.clientWidth, h = map.clientHeight;
+  if (!w) return;
+  // offsets ignore hover transforms, so the trail stays put
+  const pts = [...map.querySelectorAll('.node')].map(n => { const b = n.querySelector('.badge'); return [n.offsetLeft + b.offsetLeft + b.offsetWidth / 2, n.offsetTop + b.offsetTop + b.offsetHeight / 2]; });
+  svgEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  let base = '', gold = '';
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    let seg;
+    if (Math.abs(a[1] - b[1]) < 4) seg = `M${a} Q${(a[0] + b[0]) / 2},${a[1] - Math.min(26, h * 0.06)} ${b}`;
+    else { const dx = (a[0] > w / 2 ? 1 : -1) * Math.min(80, w * 0.11); seg = `M${a} C${a[0] + dx},${a[1]} ${b[0] + dx},${b[1]} ${b}`; }
+    base += seg;
+    if (worldStars(i) === LESSONS[i].modules.length) gold += seg;
+  }
+  svgEl.innerHTML = `<path class="trail" d="${base}"/>${gold ? `<path class="trail gold" d="${gold}"/>` : ''}`;
+}
+new ResizeObserver(() => { if (UI.view === 'menu' && UI.screen === 'map') layoutMap(); }).observe($('map'));
+
+/* ---------- level select ---------- */
+function renderWorld() {
+  const i = UI.selected, L = LESSONS[i], W = WORLDS[i], nx = nextUp(), st = worldStars(i);
+  $('world-hud-title').innerHTML = `World ${i + 1}<small>of ${LESSONS.length}</small>`;
+  $('world-stars').innerHTML = `${ICONS.star}<span>${st} / ${L.modules.length}</span>`;
+  $('btn-map').innerHTML = `${ICONS.back}<span>Map</span>`;
+  const hero = $('world-hero');
+  hero.innerHTML = `<span class="badge">${ICONS[W.icon]}</span>
+    <span class="hero-text"><span class="h2">${escHtml(L.subtitle)}</span><span class="story">${escHtml(L.story)}</span>
+    <span class="keycaps">${L.keys.map(k => `<span class="kc">${escHtml(k)}</span>`).join('')}</span></span>`;
+  paint(hero.querySelector('.badge'), W.color);
+  const wrap = $('levels'); wrap.innerHTML = '';
+  L.modules.forEach((m, j) => {
+    const g = GAMES[m.id], p = Progress.get(m.id), T = LEVEL_TYPES[j] || LEVEL_TYPES[0], isNext = m.id === nx;
+    const b = document.createElement('button');
+    b.type = 'button'; b.disabled = !g; b.dataset.id = m.id;
+    b.className = `level t${j}` + (p.done ? ' cleared' : '') + (isNext ? ' next' : '');
+    b.setAttribute('aria-label', `Level ${j + 1}, ${T.name}: ${g ? g.title : 'coming soon'}. ${p.done ? 'Cleared.' : ''} ${p.bestLabel ? 'Best ' + p.bestLabel : ''}`);
+    const status = p.done ? `<span class="ok">✓ CLEARED</span>${p.bestLabel ? `<span class="best">Best: ${escHtml(p.bestLabel)}</span>` : ''}`
+      : isNext ? '<span class="nx">★ UP NEXT</span>' : (p.bestLabel ? `<span class="best">Best: ${escHtml(p.bestLabel)}</span>` : '');
+    b.innerHTML = `<span class="band">${ICONS[T.icon]}<span>${j === 2 ? 'Boss Level' : T.name}</span>${starSvg(p.done).replace('<svg class="', '<svg class="star ')}</span>
+      <span class="body"><span class="lv">Level ${j + 1} · ${escHtml(handOf(m, j))}</span><span class="h3">${escHtml(g ? g.title : 'Coming soon')}</span>
+      <span class="desc">${escHtml(m.desc)}</span>${keysHtml(m.keys)}</span>
+      <span class="foot"><span class="status">${status}</span><span class="go">${p.done ? 'REPLAY' : 'PLAY'} ▶</span></span>
+      <span class="keynum" aria-hidden="true">${ICONS[T.icon]}</span>`;
+    b.addEventListener('click', () => { if (g) { uiSound('select'); E.start(g); } });
+    wrap.appendChild(b);
+  });
+}
+
+/* ---------- buttons ---------- */
+$('btn-play').addEventListener('click', () => { uiSound('select'); UI.go('map'); });
+$('btn-home').innerHTML = ICONS.home;
+$('btn-home').addEventListener('click', () => { uiSound('back'); UI.go('title'); });
+$('btn-map').addEventListener('click', () => { uiSound('back'); UI.go('map'); });
+$('btn-reset').innerHTML = ICONS.reset;
+$('btn-reset').addEventListener('click', () => {
+  if (confirm(`Reset all tutorial progress for ${PROFILE || 'this player'}?`)) { Progress.reset(); UI.selected = 0; UI.go('map'); toast('Progress reset'); }
+});
 $('ov-retry').addEventListener('click', () => UI.retry());
 $('ov-next').addEventListener('click', () => UI.next());
 $('ov-menu').addEventListener('click', () => UI.showMenu());
 $('btn-back').addEventListener('click', () => UI.showMenu());
-function syncSound() { ['btn-sound', 'btn-sound-menu'].forEach(id => $(id).textContent = `Sound: ${Sound.on ? 'On' : 'Off'}`); }
-['btn-sound', 'btn-sound-menu'].forEach(id => $(id).addEventListener('click', e => { Sound.set(!Sound.on); syncSound(); e.currentTarget.blur(); }));
-syncSound();
 
-function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1800); }
-
-function renderNav() {
-  const nav = $('lessons'); nav.innerHTML = '';
-  LESSONS.forEach((L, i) => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'lesson-btn' + (L.modules.length ? '' : ' locked');
-    b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', i === UI.selected);
-    const done = L.modules.filter(m => Progress.get(m.id).done).length;
-    b.innerHTML = `<span>${L.title} · ${L.subtitle}</span><small>${L.modules.length ? `${done} / ${L.modules.length} complete` : 'Coming soon'}</small>`;
-    b.addEventListener('click', () => { UI.selected = i; renderNav(); renderDetail(); });
-    nav.appendChild(b);
-  });
+/* ---------- keyboard navigation in the menus ---------- */
+function moveFocus(items, key) {
+  const cur = document.activeElement, from = items.includes(cur) ? cur : items[0];
+  const r0 = from.getBoundingClientRect(), c0 = [r0.left + r0.width / 2, r0.top + r0.height / 2];
+  const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[key];
+  let best = null, bestScore = Infinity;
+  for (const el of items) {
+    if (el === from) continue;
+    const r = el.getBoundingClientRect(), dx = r.left + r.width / 2 - c0[0], dy = r.top + r.height / 2 - c0[1];
+    const along = dx * dir[0] + dy * dir[1]; if (along <= 4) continue;
+    const across = Math.abs(dx * dir[1] - dy * dir[0]), score = along + across * 2;
+    if (score < bestScore) { bestScore = score; best = el; }
+  }
+  if (!best && items.includes(cur)) {        // nothing that way: step through in order instead
+    const k = items.indexOf(cur) + (dir[0] + dir[1] > 0 ? 1 : -1);
+    best = items[k] || null;
+  }
+  if (best) best.focus();
+  return best;
 }
-function renderDetail() {
-  const L = LESSONS[UI.selected], det = $('detail');
-  const keys = L.keys.map(k => `<span class="key">${k}</span>`).join('');
-  const mods = L.modules.length ? `<div class="modules">${L.modules.map((m, i) => {
-    const g = GAMES[m.id], p = Progress.get(m.id);
-    const status = p.done ? `✓ Completed${p.bestLabel ? ' · Best: ' + p.bestLabel : ''}` : (p.bestLabel ? `Best: ${p.bestLabel} · ▶ Play` : (g ? '▶ Play' : 'In development'));
-    return `<button type="button" class="module" data-id="${m.id}" ${g ? '' : 'disabled'}>
-      <span class="tag">Module ${i + 1} · ${m.kind}</span><h3>${g ? g.title : m.id}</h3><p>${m.desc}</p>
-      <p><strong>Keys:</strong> ${m.keys}</p><span class="status ${p.done ? 'done' : ''}">${status}</span></button>`;
-  }).join('')}</div>` : `<p class="story">This lesson is being written.</p>`;
-  det.innerHTML = `<h2>${L.title}: ${L.subtitle}</h2><p class="story">${L.story}</p><div class="keys">${keys}</div>${mods}`;
-  det.querySelectorAll('.module:not(:disabled)').forEach(b => b.addEventListener('click', () => E.start(GAMES[b.dataset.id])));
-}
-$('lessons').addEventListener('keydown', e => {
-  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') UI.selected = Math.min(LESSONS.length - 1, UI.selected + 1);
-  else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') UI.selected = Math.max(0, UI.selected - 1);
-  else return;
-  e.preventDefault(); renderNav(); renderDetail(); $('lessons').children[UI.selected].focus();
+document.addEventListener('keydown', e => {
+  // defaultPrevented: the game already handled this key (e.g. Esc that just returned us to the menu)
+  if (UI.view !== 'menu' || e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey) return;
+  const onButton = document.activeElement && document.activeElement.tagName === 'BUTTON';
+  if (UI.screen === 'title') {
+    if ((e.key === 'Enter' || e.key === ' ') && !onButton) { e.preventDefault(); $('btn-play').click(); }
+    return;
+  }
+  if (UI.screen === 'map') {
+    const nodes = [...$('map').querySelectorAll('.node')];
+    if (e.key.startsWith('Arrow')) { e.preventDefault(); if (!nodes.includes(document.activeElement)) nodes[UI.selected].focus(); else moveFocus(nodes, e.key); }
+    else if (e.key === 'Enter' && !onButton) { e.preventDefault(); nodes[UI.selected].click(); }
+    else if (e.key === 'Escape') { e.preventDefault(); uiSound('back'); UI.go('title'); }
+    else if (/^[1-6]$/.test(e.key) && LESSONS[+e.key - 1]) { e.preventDefault(); UI.selected = +e.key - 1; uiSound('select'); UI.go('world'); }
+    return;
+  }
+  if (UI.screen === 'world') {
+    const cards = [...$('levels').querySelectorAll('.level:not(:disabled)')];
+    if (e.key.startsWith('Arrow')) { e.preventDefault(); if (cards.length) { if (!cards.includes(document.activeElement)) cards[0].focus(); else if (moveFocus(cards, e.key)) uiSound('move'); } }
+    else if (/^[1-9]$/.test(e.key)) { const c = $('levels').children[+e.key - 1]; if (c && !c.disabled) { e.preventDefault(); c.click(); } }
+    else if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); uiSound('back'); UI.go('map'); }
+    else if (e.key === 'Enter' && !onButton && cards[0]) { e.preventDefault(); ($('levels').querySelector('.level.next:not(:disabled)') || cards[0]).click(); }
+  }
 });
-$('btn-progress').addEventListener('click', () => toast(`${ORDER.filter(id => Progress.get(id).done).length} of ${ORDER.length} modules complete`));
-$('btn-reset').addEventListener('click', () => { if (confirm('Reset all progress?')) { Progress.reset(); renderNav(); renderDetail(); toast('Progress reset'); } });
+
+/* ---------- animated menu background ---------- */
+const MenuBG = {
+  cv: $('menu-bg'), c: $('menu-bg').getContext('2d'),
+  stars: Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random() * 0.7, r: Math.random() * 1.2 + 0.3, p: Math.random() * TAU, s: 0.6 + Math.random() * 1.6 })),
+  motes: Array.from({ length: 18 }, () => ({ x: Math.random(), y: Math.random(), v: 0.012 + Math.random() * 0.025, r: 0.8 + Math.random() * 1.8, p: Math.random() * TAU })),
+  draw(t) {
+    const cv = this.cv, c = this.c, W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const s = t / 1000;
+    const sky = c.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#060c19'); sky.addColorStop(0.6, '#112140'); sky.addColorStop(1, '#1b2d50');
+    c.fillStyle = sky; c.fillRect(0, 0, W, H);
+    const tint = WORLDS[UI.screen === 'title' ? 0 : UI.selected].color;
+    const gl = c.createRadialGradient(W * 0.5, H * 0.45, 0, W * 0.5, H * 0.45, Math.max(W, H) * 0.65);
+    gl.addColorStop(0, UI.screen === 'world' ? shade(tint, -0.2).replace('rgb', 'rgba').replace(')', ',0.22)') : 'rgba(111,168,255,0.15)');
+    gl.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = gl; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#fff';
+    for (const st of this.stars) { c.globalAlpha = 0.25 + 0.6 * (0.5 + 0.5 * Math.sin(s * st.s + st.p)); c.beginPath(); c.arc(st.x * W, st.y * H, st.r, 0, TAU); c.fill(); }
+    c.globalAlpha = 1;
+    const hill = (base, amp, f, speed, color) => {
+      c.beginPath(); c.moveTo(0, H);
+      for (let x = 0; x <= W + 10; x += 10) { const u = (x + s * speed) / W; c.lineTo(x, H * base - H * amp * (0.6 * Math.sin(u * f + 1) + 0.4 * Math.sin(u * f * 2.3 + 2))); }
+      c.lineTo(W, H); c.closePath(); c.fillStyle = color; c.fill();
+    };
+    hill(0.80, 0.08, 4, 6, 'rgba(140,170,230,0.08)');
+    hill(0.88, 0.06, 6, 14, 'rgba(9,16,31,0.85)');
+    hill(0.95, 0.035, 9, 26, 'rgba(5,10,20,0.95)');
+    c.fillStyle = '#ffe9a8';
+    for (const m of this.motes) {
+      const y = (((m.y - s * m.v) % 1) + 1) % 1, x = m.x + Math.sin(s * 0.6 + m.p) * 0.02;
+      c.globalAlpha = 0.2 + 0.25 * (0.5 + 0.5 * Math.sin(s * 1.3 + m.p)); c.beginPath(); c.arc(x * W, y * H, m.r, 0, TAU); c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+};
 
 /* ---------- menu banner ---------- */
 const Banner = {
@@ -2493,7 +2860,7 @@ const Banner = {
     const dpr = Math.min(devicePixelRatio || 1, 2);
     if (this.cv.width !== Math.round(CW * dpr) || this.cv.height !== Math.round(CH * dpr)) this.size();
     // the scene is designed 90px tall; scale it down to fit shorter banners so nothing gets cut off
-    const k = Math.min(1, CH / 90), W = CW / k, H = CH / k, g = H - 8;
+    const k = Math.min(1.8, CH / 90), W = CW / k, H = CH / k, g = H - 8;
     c.setTransform(dpr * k, 0, 0, dpr * k, 0, 0);
     c.clearRect(0, 0, W, H);
     c.strokeStyle = c.fillStyle = 'rgba(255,255,255,0.9)'; c.lineCap = c.lineJoin = 'round';
@@ -2527,7 +2894,8 @@ const Banner = {
 };
 
 if (/[?&]embed\b/.test(location.search)) document.body.classList.add('embed');
-UI.showMenu();
+{ const nx = nextUp(); UI.selected = nx ? worldOf(nx) : 0; }
+UI.go('title');
 requestAnimationFrame(frame);
 
 })();
