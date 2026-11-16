@@ -1254,14 +1254,15 @@
                CONSTANTS
                ===================================================================== */
             const $ = id => document.getElementById(id);
-            const API = 'https://bible-api.com/';
+            // KJV text lives in this repo: data/kjv/<BookNameWithoutSpaces>.json (public domain).
+            const DATA_PATH = 'data/kjv/';
             // Local background music (relative to index.html). Tracks play in order and loop forever.
             // Currently one combined file exported from Clipchamp; add more paths here if needed.
             const MUSIC_TRACKS = [
                 'audio/music.mp4'
             ];
             const ADVANCE_DELAY = 1800;          // ms between a completed verse and the next one
-            const MAX_RANDOM_TRIES = 6;          // bible-api.com allows ~15 requests / 30 s per IP
+            const MAX_RANDOM_TRIES = 25;         // local data: tries are cheap
             const CONFIRM_PHRASE = 'Yes, I am sure.';
             const CHAPTER_CACHE_KEY = 'scripture-flow-chapter-cache';
             const VOLUME_KEY = 'scripture-flow-volume';
@@ -1362,8 +1363,10 @@
             let progressCurrentBook = null;
             let pendingMemoryDelete = null;
 
-            let chapterDataCache = {};
-            try { chapterDataCache = JSON.parse(localStorage.getItem(CHAPTER_CACHE_KEY)) || {}; } catch { chapterDataCache = {}; }
+            const bookCache = {};              // book name -> { chapters: [[verse text, ...], ...] }
+            const bookLoads = {};              // book name -> in-flight Promise
+            // The old online chapter cache is no longer needed; free that browser storage.
+            try { localStorage.removeItem(CHAPTER_CACHE_KEY); } catch { /* ignore */ }
 
             /* =====================================================================
                UTILITIES
@@ -1374,9 +1377,10 @@
                 return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
             }
 
-            // Normalise API text so every character is typeable on a normal keyboard.
+            // Normalise text so every character is typeable on a normal keyboard.
             function cleanText(text) {
                 return text.replace(/^\d+\s*/, '')
+                    .replace(/[\u00B6\[\]{}<>]/g, '')   // pilcrows / italics brackets some KJV files include
                     .replace(/\s+/g, ' ')
                     .replace(/[‘’]/g, "'")
                     .replace(/[“”]/g, '"')
@@ -1413,12 +1417,6 @@
                     localStorage.setItem(key, value);
                     return true;
                 } catch (err) {
-                    // Storage full: the chapter cache is the only thing that can safely be thrown away.
-                    if (key !== CHAPTER_CACHE_KEY) {
-                        chapterDataCache = {};
-                        localStorage.removeItem(CHAPTER_CACHE_KEY);
-                        try { localStorage.setItem(key, value); return true; } catch { /* fall through */ }
-                    }
                     console.warn('Could not save to localStorage:', key, err);
                     return false;
                 }
@@ -1524,50 +1522,41 @@
             }
 
             /* =====================================================================
-               BIBLE API
+               BIBLE TEXT (local files in data/kjv/)
                ===================================================================== */
-            async function apiFetch(ref) {
-                const res = await fetch(`${API}${encodeURIComponent(ref)}?translation=kjv`);
-                if (!res.ok) {
-                    const err = new Error(`Bible API error ${res.status}`);
-                    err.status = res.status;
-                    throw err;
+            // One file per book, loaded once and kept in memory. No API, no rate limits.
+            function loadBook(book) {
+                if (bookCache[book]) return Promise.resolve(bookCache[book]);
+                if (!bookLoads[book]) {
+                    bookLoads[book] = fetch(`${DATA_PATH}${book.replace(/\s/g, '')}.json`)
+                        .then(res => {
+                            if (!res.ok) throw new Error(`Could not load ${book} (${res.status})`);
+                            return res.json();
+                        })
+                        .then(data => {
+                            if (!Array.isArray(data?.chapters)) throw new Error(`Bad data for ${book}`);
+                            bookCache[book] = data;
+                            return data;
+                        })
+                        .finally(() => { delete bookLoads[book]; });
                 }
-                return res.json();
+                return bookLoads[book];
             }
 
-            // Single-chapter books (Jude, Obadiah...) are requested as a verse range, because the API
-            // interprets "Jude 1" as verse 1 rather than chapter 1.
-            function chapterFetchRef(book, chapter) {
-                return book.replace(/\s/g, '') + (bookChapterCounts[book] === 1 ? '1:1-' + bookVerseCounts[book] : chapter);
-            }
-
-            // One cached source of truth for chapter text. Random, Choice, Chapter and Progress views all use it,
-            // so typing a whole chapter is now 1 request instead of 1 per verse.
             async function getChapter(book, chapter) {
-                const key = `${book} ${chapter}`;
-                if (chapterDataCache[key]) return chapterDataCache[key];
-                const data = await apiFetch(chapterFetchRef(book, chapter));
-                if (!data?.verses?.length) throw new Error('Empty chapter');
-                const entry = {
-                    total: data.verses.length,
-                    verses: data.verses.map(v => ({ verse: v.verse, text: v.text }))   // store only what we use
-                };
-                chapterDataCache[key] = entry;
-                safeSetItem(CHAPTER_CACHE_KEY, JSON.stringify(chapterDataCache));
-                return entry;
+                const data = await loadBook(book);
+                const texts = data.chapters[chapter - 1];
+                if (!texts?.length) throw new Error('Empty chapter');
+                return { total: texts.length, verses: texts.map((text, i) => ({ verse: i + 1, text })) };
             }
 
             async function fetchVerse(ref) {
                 const parsed = parseRef(ref);
-                if (parsed && bookChapterCounts[parsed.book]) {
-                    const chapter = await getChapter(parsed.book, parsed.chapter);
-                    const v = chapter.verses.find(x => x.verse === parsed.verse);
-                    if (!v) throw new Error('Verse not found');
-                    return { verseText: cleanText(v.text), reference: `${parsed.book} ${parsed.chapter}:${parsed.verse}` };
-                }
-                const data = await apiFetch(ref.replace(/\s/g, ''));
-                return { verseText: cleanText(data.text), reference: data.reference };
+                if (!parsed || !bookChapterCounts[parsed.book]) throw new Error(`Unknown reference: ${ref}`);
+                const chapter = await getChapter(parsed.book, parsed.chapter);
+                const v = chapter.verses.find(x => x.verse === parsed.verse);
+                if (!v) throw new Error('Verse not found');
+                return { verseText: cleanText(v.text), reference: `${parsed.book} ${parsed.chapter}:${parsed.verse}` };
             }
 
             async function fetchUnseenVerse() {
@@ -1755,13 +1744,10 @@
                 }
             }
 
-            // Replaces the old silent "John 3:16" fallback, which recorded John 3:16 as completed
-            // whenever the API was unreachable.
             function showLoadError(err, retry) {
+                console.warn(err);
                 verseEl.className = '';
-                const msg = err?.status === 429
-                    ? 'The Bible service is busy (too many requests). Please wait a few seconds and try again.'
-                    : 'Couldn\u2019t reach the Bible service. Check your connection and try again.';
+                const msg = 'Couldn\u2019t load the scripture text. Check your connection and try again.';
                 verseEl.innerHTML = `<p class="loading">${msg}</p><button type="button" class="retry-btn">Retry</button>`;
                 verseEl.querySelector('.retry-btn').addEventListener('click', e => { e.stopPropagation(); retry(); });
             }
@@ -2123,7 +2109,7 @@
                 grid.className = 'chapters-grid';
                 for (let ch = 1; ch <= bookChapterCounts[book]; ch++) {
                     const done = counts[ch] || 0;
-                    const total = chapterDataCache[`${book} ${ch}`]?.total || 0;
+                    const total = bookCache[book]?.chapters[ch - 1]?.length || 0;
                     const percent = total > 0 ? done / total : (done > 0 ? 0.1 : 0);
                     const bubble = document.createElement('div');
                     bubble.className = 'chapter-bubble' + (percent >= 1 ? ' complete' : percent > 0 ? ' partial' : '');
@@ -2134,6 +2120,12 @@
                     grid.appendChild(bubble);
                 }
                 container.replaceChildren(grid);
+                // First visit to this book: load it, then redraw with real verse totals (if still on screen).
+                if (!bookCache[book]) {
+                    loadBook(book)
+                        .then(() => { if (container.firstChild === grid) renderChaptersGrid(container, book, onPick); })
+                        .catch(err => console.warn(err));
+                }
             }
 
             function showBibleMap() {
