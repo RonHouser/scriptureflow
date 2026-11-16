@@ -15,7 +15,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet" />
     <!-- TIP: replace "latest" with a specific version number so a future Lucide release can't silently break the icons -->
     <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/tone@14.8.39/build/Tone.min.js"></script>
     <style>
         :root {
             --bg-start: #0a0e1a;
@@ -1256,7 +1255,7 @@
             const $ = id => document.getElementById(id);
             // KJV text lives in this repo: data/kjv/<BookNameWithoutSpaces>.json (public domain).
             const DATA_PATH = 'data/kjv/';
-            // Local background music (relative to index.html). Tracks play in order and loop forever.
+            // Local background music (relative to index.html). Starts at a random point, fades in, loops forever.
             // Currently one combined file exported from Clipchamp; add more paths here if needed.
             const MUSIC_TRACKS = [
                 'audio/music.mp4'
@@ -1581,6 +1580,7 @@
             let musicFailed = false;
             let failedInARow = 0;              // consecutive tracks that failed to load
             let fadeTimer = null;
+            const FADE_IN_MS = 4000;           // length of the fade-in when music starts or resumes
 
             const targetVolume = () => parseFloat(volumeSlider.value);
 
@@ -1589,25 +1589,37 @@
                 musicStatus.hidden = !text;
             }
 
+            // Smooth, time-based fade from silence up to the slider volume.
             function fadeIn() {
                 clearInterval(fadeTimer);
-                const target = targetVolume();
+                const startTime = performance.now();
                 fadeTimer = setInterval(() => {
-                    if (ambient.volume < target) {
-                        ambient.volume = Math.min(target, ambient.volume + 0.01);
-                    } else {
-                        clearInterval(fadeTimer);
-                    }
-                }, 40);
+                    const t = Math.min(1, (performance.now() - startTime) / FADE_IN_MS);
+                    ambient.volume = Math.min(1, Math.max(0, targetVolume() * t * t));   // ease-in curve sounds more natural
+                    if (t >= 1) clearInterval(fadeTimer);
+                }, 50);
             }
 
-            function loadTrack(index) {
+            // When a track first loads, jump to a random spot (not in the last 10% so it doesn't loop right away).
+            let pendingRandomStart = false;
+            ambient.addEventListener('loadedmetadata', () => {
+                if (!pendingRandomStart) return;
+                pendingRandomStart = false;
+                const d = ambient.duration;
+                if (Number.isFinite(d) && d > 10) {
+                    try { ambient.currentTime = Math.random() * d * 0.9; } catch { /* seeking not supported: start at 0 */ }
+                }
+            });
+
+            function loadTrack(index, randomStart = false) {
                 trackIndex = index % MUSIC_TRACKS.length;
+                pendingRandomStart = randomStart;
                 ambient.src = MUSIC_TRACKS[trackIndex];
-                ambient.loop = MUSIC_TRACKS.length === 1;   // single file: let the browser loop it seamlessly
+                ambient.loop = MUSIC_TRACKS.length === 1;   // single file: loop it forever
             }
 
             function playAmbient() {
+                clearInterval(fadeTimer);
                 ambient.volume = 0;
                 ambient.play()
                     .then(() => { setMusicStatus(''); fadeIn(); })
@@ -1621,7 +1633,7 @@
             function startMusic() {
                 if (musicStarted || musicFailed) return;
                 musicStarted = true;
-                if (!ambient.getAttribute('src')) loadTrack(0);
+                if (!ambient.getAttribute('src')) loadTrack(randomInt(0, MUSIC_TRACKS.length - 1), true);
                 playAmbient();
             }
 
@@ -1669,42 +1681,77 @@
             });
 
             /* =====================================================================
-               COMPLETION SOUND (Tone.js)
+               COMPLETION SOUND (built-in Web Audio, no external library)
                ===================================================================== */
-            let completionSynth = null;
-            let completionInit = null;
+            // The old Tone.js sound was a low C3 through an 800 Hz filter with a 0.8 s attack cut off after
+            // ~0.25 s, so it barely played and laptop/phone speakers can't reproduce it well. This is a soft,
+            // bright bell chord that's clearly audible over the music.
+            let audioCtx = null;
+            let chimeOut = null;
 
-            function initCompletionSound() {
-                if (completionInit || !window.Tone) return completionInit;
-                completionInit = (async () => {
-                    await Tone.start();
-                    const reverb = new Tone.Reverb({ decay: 8, wet: 0.6 }).toDestination();
-                    const delay = new Tone.FeedbackDelay('8n', 0.4).toDestination();
-                    const filter = new Tone.Filter(800, 'lowpass');
-                    filter.connect(reverb);
-                    filter.connect(delay);
-                    completionSynth = new Tone.PolySynth(Tone.FMSynth, {
-                        harmonicity: 3,
-                        modulationIndex: 10,
-                        oscillator: { type: 'sine' },
-                        envelope: { attack: 0.8, decay: 1, sustain: 0.6, release: 2 },
-                        modulation: { type: 'square' },
-                        volume: -9
-                    }).connect(filter);
-                })().catch(err => {
-                    completionInit = null;
-                    console.warn('Completion sound unavailable:', err);
-                });
-                return completionInit;
+            function getAudioCtx() {
+                if (!audioCtx) {
+                    const Ctx = window.AudioContext || window.webkitAudioContext;
+                    if (!Ctx) return null;
+                    audioCtx = new Ctx();
+                    chimeOut = audioCtx.createGain();
+                    chimeOut.gain.value = 0.5;
+                    // Simple echo for a little space.
+                    const echo = audioCtx.createDelay(1);
+                    const feedback = audioCtx.createGain();
+                    echo.delayTime.value = 0.28;
+                    feedback.gain.value = 0.3;
+                    chimeOut.connect(audioCtx.destination);
+                    chimeOut.connect(echo);
+                    echo.connect(feedback);
+                    feedback.connect(echo);
+                    feedback.connect(audioCtx.destination);
+                }
+                return audioCtx;
             }
+
+            // Browsers only allow sound after a user gesture. Unlock on the first click, tap OR key press,
+            // and again later if the browser suspended audio (tab switching, phone lock, etc.).
+            function unlockAudio() {
+                const ctx = getAudioCtx();
+                if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
+            }
+            ['pointerdown', 'keydown', 'touchend'].forEach(evt =>
+                document.addEventListener(evt, unlockAudio, { capture: true, passive: true }));
+
+            function playChimeNote(ctx, freq, when, peak) {
+                const osc = ctx.createOscillator();
+                const overtone = ctx.createOscillator();
+                const env = ctx.createGain();
+                const overtoneGain = ctx.createGain();
+                osc.type = 'sine';
+                overtone.type = 'sine';
+                osc.frequency.value = freq;
+                overtone.frequency.value = freq * 2.76;     // bell-like partial
+                overtoneGain.gain.value = 0.25;
+                env.gain.setValueAtTime(0.0001, when);
+                env.gain.exponentialRampToValueAtTime(peak, when + 0.015);
+                env.gain.exponentialRampToValueAtTime(0.0001, when + 1.8);
+                osc.connect(env);
+                overtone.connect(overtoneGain).connect(env);
+                env.connect(chimeOut);
+                osc.start(when); overtone.start(when);
+                osc.stop(when + 1.9); overtone.stop(when + 1.9);
+            }
+
             function playCompletionSound() {
-                if (completionSynth) completionSynth.triggerAttackRelease('C3', '8n');
+                const ctx = getAudioCtx();
+                if (!ctx) return;
+                const play = () => {
+                    const t = ctx.currentTime + 0.02;
+                    // Gentle rising C major arpeggio: C5, E5, G5
+                    playChimeNote(ctx, 523.25, t, 0.35);
+                    playChimeNote(ctx, 659.25, t + 0.09, 0.3);
+                    playChimeNote(ctx, 783.99, t + 0.18, 0.28);
+                };
+                if (ctx.state === 'running') play();
+                else ctx.resume().then(play).catch(err => console.warn('Completion sound blocked:', err));
             }
-            // Audio must be unlocked by a user gesture. "click" also fires for taps and keyboard-activated buttons.
-            // (The old code listened to click AND touchstart, which built two synths on touch devices.)
-            document.addEventListener('click', () => {
-                if (!completionSynth) initCompletionSound();
-            });
 
             /* =====================================================================
                VERSE LOADING & RENDERING
@@ -2625,7 +2672,7 @@
                ===================================================================== */
             initProfiles();
             initParticles();
-            // Lucide/Tone are loaded with "defer", so they're ready by DOMContentLoaded.
+            // Lucide is loaded with "defer", so they're ready by DOMContentLoaded.
             document.addEventListener('DOMContentLoaded', refreshIcons);
         })();
     </script>
