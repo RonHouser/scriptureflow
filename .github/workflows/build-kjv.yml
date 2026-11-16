@@ -1,0 +1,22 @@
+name: Build KJV data
+
+on:
+  workflow_dispatch:   # run manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and convert KJV text
+        run: python3 tools/build_kjv.py
+      - name: Commit data files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add data/kjv
+          git diff --cached --quiet && echo "No changes" || git commit -m "Add local KJV text (public domain)"
+          git push
