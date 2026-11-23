@@ -1683,33 +1683,36 @@
             /* =====================================================================
                COMPLETION SOUND (built-in Web Audio, no external library)
                ===================================================================== */
-            // The old Tone.js sound was a low C3 through an 800 Hz filter with a 0.8 s attack cut off after
-            // ~0.25 s, so it barely played and laptop/phone speakers can't reproduce it well. This is a soft,
-            // bright bell chord that's clearly audible over the music.
+            // A deep, slowly swelling "whoomb": a low C chord (C2 + C3 + G3) through a low-pass filter that
+            // opens and closes, with a gentle pulse. It restores the original low Tone.js sound, but lets it
+            // play out fully (the old version was cut off after ~0.25 s). The C4 octave layer keeps it
+            // audible on laptop/phone speakers that can't reproduce deep bass.
+            const WHOOMB = {
+                volume: 0.55,       // overall loudness of the completion sound
+                attack: 0.55,       // seconds to swell up (matches the peak of the card's glow animation)
+                release: 2.2,       // seconds to fade away after the peak
+                filterLow: 180,     // Hz: muffled starting tone
+                filterHigh: 950,    // Hz: how far the tone "opens up" at the peak
+                pulseRate: 3.2,     // Hz: speed of the soft throb while it fades (0 = no pulse)
+                pulseDepth: 0.22    // 0..1: how strong the throb is
+            };
             let audioCtx = null;
-            let chimeOut = null;
-
+            let soundOut = null;
             function getAudioCtx() {
                 if (!audioCtx) {
                     const Ctx = window.AudioContext || window.webkitAudioContext;
                     if (!Ctx) return null;
                     audioCtx = new Ctx();
-                    chimeOut = audioCtx.createGain();
-                    chimeOut.gain.value = 0.5;
-                    // Simple echo for a little space.
-                    const echo = audioCtx.createDelay(1);
-                    const feedback = audioCtx.createGain();
-                    echo.delayTime.value = 0.28;
-                    feedback.gain.value = 0.3;
-                    chimeOut.connect(audioCtx.destination);
-                    chimeOut.connect(echo);
-                    echo.connect(feedback);
-                    feedback.connect(echo);
-                    feedback.connect(audioCtx.destination);
+                    soundOut = audioCtx.createGain();
+                    soundOut.gain.value = WHOOMB.volume;
+                    // Soft limiter so the low end never clips or distorts small speakers.
+                    const comp = audioCtx.createDynamicsCompressor();
+                    comp.threshold.value = -14;
+                    comp.ratio.value = 4;
+                    soundOut.connect(comp).connect(audioCtx.destination);
                 }
                 return audioCtx;
             }
-
             // Browsers only allow sound after a user gesture. Unlock on the first click, tap OR key press,
             // and again later if the browser suspended audio (tab switching, phone lock, etc.).
             function unlockAudio() {
@@ -1718,41 +1721,59 @@
             }
             ['pointerdown', 'keydown', 'touchend'].forEach(evt =>
                 document.addEventListener(evt, unlockAudio, { capture: true, passive: true }));
-
-            function playChimeNote(ctx, freq, when, peak) {
-                const osc = ctx.createOscillator();
-                const overtone = ctx.createOscillator();
+            function playWhoomb(ctx, t) {
+                const peak = t + WHOOMB.attack;
+                const end = peak + WHOOMB.release;
+                // Low-pass filter sweep: closed -> open -> closed gives the "whooo...mmb" shape.
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.Q.value = 6;                                 // slight resonance = warm "wh" vowel
+                filter.frequency.setValueAtTime(WHOOMB.filterLow, t);
+                filter.frequency.exponentialRampToValueAtTime(WHOOMB.filterHigh, peak);
+                filter.frequency.exponentialRampToValueAtTime(WHOOMB.filterLow * 0.6, end);
+                // Main swell envelope.
                 const env = ctx.createGain();
-                const overtoneGain = ctx.createGain();
-                osc.type = 'sine';
-                overtone.type = 'sine';
-                osc.frequency.value = freq;
-                overtone.frequency.value = freq * 2.76;     // bell-like partial
-                overtoneGain.gain.value = 0.25;
-                env.gain.setValueAtTime(0.0001, when);
-                env.gain.exponentialRampToValueAtTime(peak, when + 0.015);
-                env.gain.exponentialRampToValueAtTime(0.0001, when + 1.8);
-                osc.connect(env);
-                overtone.connect(overtoneGain).connect(env);
-                env.connect(chimeOut);
-                osc.start(when); overtone.start(when);
-                osc.stop(when + 1.9); overtone.stop(when + 1.9);
+                env.gain.setValueAtTime(0.0001, t);
+                env.gain.exponentialRampToValueAtTime(1, peak);
+                env.gain.setTargetAtTime(0.0001, peak, WHOOMB.release / 4);
+                // Gentle pulse (tremolo) that throbs as the sound fades.
+                const pulse = ctx.createGain();
+                pulse.gain.value = 1 - WHOOMB.pulseDepth / 2;
+                const lfo = ctx.createOscillator();
+                const lfoDepth = ctx.createGain();
+                lfo.frequency.value = WHOOMB.pulseRate;
+                lfoDepth.gain.value = WHOOMB.pulseDepth / 2;
+                lfo.connect(lfoDepth).connect(pulse.gain);
+                filter.connect(env).connect(pulse).connect(soundOut);
+                // Voices: [frequency Hz, wave type, level, detune cents]
+                const voices = [
+                    [65.41,  'sine',     0.9,  0],   // C2 sub: the body of the "whoomb"
+                    [130.81, 'sawtooth', 0.35, -6],  // C3: the original note, warm through the filter
+                    [130.81, 'sawtooth', 0.35, 6],   // C3 slightly detuned: slow chorus shimmer
+                    [196.00, 'triangle', 0.25, 0],   // G3: open fifth
+                    [261.63, 'sine',     0.18, 0]    // C4: lets small speakers "hear" the low tone
+                ];
+                voices.forEach(([freq, type, level, detune]) => {
+                    const osc = ctx.createOscillator();
+                    const g = ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.value = freq;
+                    osc.detune.value = detune;
+                    g.gain.value = level;
+                    osc.connect(g).connect(filter);
+                    osc.start(t);
+                    osc.stop(end + 0.3);
+                });
+                lfo.start(t);
+                lfo.stop(end + 0.3);
             }
-
             function playCompletionSound() {
                 const ctx = getAudioCtx();
                 if (!ctx) return;
-                const play = () => {
-                    const t = ctx.currentTime + 0.02;
-                    // Gentle rising C major arpeggio: C5, E5, G5
-                    playChimeNote(ctx, 523.25, t, 0.35);
-                    playChimeNote(ctx, 659.25, t + 0.09, 0.3);
-                    playChimeNote(ctx, 783.99, t + 0.18, 0.28);
-                };
+                const play = () => playWhoomb(ctx, ctx.currentTime + 0.02);
                 if (ctx.state === 'running') play();
                 else ctx.resume().then(play).catch(err => console.warn('Completion sound blocked:', err));
             }
-
             /* =====================================================================
                VERSE LOADING & RENDERING
                ===================================================================== */
